@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     error::Error,
     fs,
-    io::{self, ErrorKind},
+    io::{self, ErrorKind}, env,
 };
 
 // MADE IN 1h 40min
@@ -13,13 +13,13 @@ const CODE_TEMPLATE: &'static str = r#"
 MODULE main
     VAR
         s : STATES;
-        PLACES
+PLACES
     ASSIGN
         init(s) := STATE_ASSIGN;
 
         next(s) := case
-                    STATE_TRANSITION
-                   esac;
+STATE_TRANSITION
+        esac;
         
         PLACE_TRANSITION
 
@@ -94,9 +94,12 @@ struct Input {
 }
 
 fn main() -> Result<(), impl Error> {
-    // env::args().next();
-    // let file_path = env::args().next().unwrap();
-    let petri = fs::read_to_string("./petri.json")?;
+    // READING INPUTS
+    let mut args = env::args();
+    args.next();
+    let file_path = args.next().unwrap_or("./petri.json".into());
+    let output_path = args.next().unwrap_or("./automata.smv".into());
+    let petri = fs::read_to_string(&file_path)?;
     let Input {
         m_init,
         transitions,
@@ -148,9 +151,9 @@ fn main() -> Result<(), impl Error> {
         "PLACES",
         &places
             .iter()
-            .map(|p| format!("{} : {}..{};", p.alias, p.min, p.max))
+            .map(|p| format!("\t\t{} : 0..{};", p.alias, /*p.min,*/ p.max))
             .collect::<Vec<_>>()
-            .join("\n\t"),
+            .join("\n"),
     );
 
     let code_template = code_template.replace(
@@ -202,5 +205,5 @@ fn main() -> Result<(), impl Error> {
             .join("\n\t\t"),
     );
 
-    fs::write("./automata.smv", &code_template)
+    fs::write(&output_path, &code_template)
 }
