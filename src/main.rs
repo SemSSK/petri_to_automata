@@ -1,10 +1,9 @@
 use std::{
     collections::HashMap,
-    error::Error,
-    fs,
-    io::{self, ErrorKind}, env,
+    fs
 };
-
+use thiserror::Error;
+use clap::*;
 // MADE IN 1h 40min
 
 use serde::Deserialize;
@@ -87,29 +86,45 @@ fn vector_to_string(v: &Vec<i32>, sep: &str) -> String {
         .join(sep)
 }
 
+#[derive(Error,Debug)]
+enum ErrorTypes {
+    #[error("Transition vector size not matching number of places: expected {expected:?}")]
+    TransitionSizeNotMatching {
+        expected: usize
+    }
+}
+
+
+#[derive(Debug,Parser)]
+/// Program that allows to convert a petri network to a Finite state automata
+/// using json to represent petri network and smv to represent the automata
+#[command(author,version)]
+struct Args {
+    /// path to the source of the petri network
+    #[arg(short,long,default_value_t=("./petri.json".to_string()))]
+    source:String,
+    /// path to the output file
+    #[arg(short,long,default_value_t=("./automata.smv".to_string()))]
+    output:String
+}
+
 #[derive(Deserialize)]
 struct Input {
     m_init: Vec<i32>,
     transitions: Vec<Vec<i32>>,
 }
 
-fn main() -> Result<(), impl Error> {
+fn main() -> Result<(), anyhow::Error> {
     // READING INPUTS
-    let mut args = env::args();
-    args.next();
-    let file_path = args.next().unwrap_or("./petri.json".into());
-    let output_path = args.next().unwrap_or("./automata.smv".into());
-    let petri = fs::read_to_string(&file_path)?;
+    let args = Args::parse();
+    let petri = fs::read_to_string(&args.source)?;
     let Input {
         m_init,
         transitions,
     } = serde_json::from_str(&petri).unwrap();
 
     if transitions.iter().any(|t| t.len() != m_init.len()) {
-        return Err(io::Error::new(
-            ErrorKind::Other,
-            "Transition input wrong size",
-        ));
+        return Err(anyhow::Error::new(ErrorTypes::TransitionSizeNotMatching { expected: m_init.len()}))
     }
 
     // CONSTRUCTION DU GRAPH DES MARQUAGES
@@ -205,5 +220,7 @@ fn main() -> Result<(), impl Error> {
             .join("\n\t\t"),
     );
 
-    fs::write(&output_path, &code_template)
+    fs::write(&args.output, &code_template)?;
+
+    Ok(())
 }
