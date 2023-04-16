@@ -8,6 +8,12 @@ use clap::*;
 
 use serde::Deserialize;
 
+const DOT_TEMPLATE: &'static str = r#"
+    digraph {
+        GRAPH
+    }
+"#;
+
 const CODE_TEMPLATE: &'static str = r#"
 MODULE main
     VAR
@@ -105,7 +111,10 @@ struct Args {
     source:String,
     /// path to the output file
     #[arg(short,long,default_value_t=("./automata.smv".to_string()))]
-    output:String
+    output:String,
+    /// path to optional output as a dot file readable by graphviz
+    #[arg(short,long)]
+    dot:Option<String>
 }
 
 #[derive(Deserialize)]
@@ -221,6 +230,17 @@ fn main() -> Result<(), anyhow::Error> {
     );
 
     fs::write(&args.output, &code_template)?;
+
+    let dot_tempate = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
+        .iter()
+        .map(|(k,v)| format!("{} -> {{{}}}",vector_to_string(k, ""),v.iter().map(|n| vector_to_string(n, "")).collect::<Vec<_>>().join(",")))
+        .collect::<Vec<_>>()
+        .join("\n\t\t"));
+
+    match args.dot {
+        Some(p) => fs::write(&p, &dot_tempate)?,
+        None => {},
+    };
 
     Ok(())
 }
