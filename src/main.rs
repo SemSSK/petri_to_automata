@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
-    fs
+    fs, io
 };
+use graphviz_rust::{parse, exec, printer::PrinterContext, cmd::Format};
 use thiserror::Error;
 use clap::*;
 // MADE IN 1h 40min
@@ -97,6 +98,10 @@ enum ErrorTypes {
     #[error("Transition vector size not matching number of places: expected {expected:?}")]
     TransitionSizeNotMatching {
         expected: usize
+    },
+    #[error("Cannot assemble graph reason: {reason:?}")]
+    CannotAssembleGraph {
+        reason: String
     }
 }
 
@@ -231,14 +236,22 @@ fn main() -> Result<(), anyhow::Error> {
 
     fs::write(&args.output, &code_template)?;
 
-    let dot_tempate = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
+    /// generating graph using graphviz
+    let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
         .iter()
-        .map(|(k,v)| format!("{} -> {{{}}}",vector_to_string(k, ""),v.iter().map(|n| vector_to_string(n, "")).collect::<Vec<_>>().join(",")))
+        .map(|(k,v)| format!("{} -> {}",vector_to_string(k, ""),v.iter().map(|n| vector_to_string(n, "")).collect::<Vec<_>>().join(",")))
         .collect::<Vec<_>>()
         .join("\n\t\t"));
 
+    
+    let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+    let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
+
     match args.dot {
-        Some(p) => fs::write(&p, &dot_tempate)?,
+        Some(p) => {
+            dbg!(fs::write(&format!("{}.dot",&p),dot_template)?);
+            dbg!(fs::write(&format!("{}.svg",&p), graph_svg)?)
+        },
         None => {},
     };
 

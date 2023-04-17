@@ -9,6 +9,7 @@ pkgs.mkShell {
         llvmPackages.libclang
         pkgconfig
         openssl
+        graphviz
     ];
 
 }
