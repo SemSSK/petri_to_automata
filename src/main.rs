@@ -9,13 +9,13 @@ use clap::*;
 
 use serde::Deserialize;
 
-const DOT_TEMPLATE: &'static str = r#"
+const DOT_TEMPLATE: &str = r#"
     digraph {
         GRAPH
     }
 "#;
 
-const CODE_TEMPLATE: &'static str = r#"
+const CODE_TEMPLATE: &str = r#"
 MODULE main
     VAR
         s : STATES;
@@ -155,8 +155,8 @@ fn main() -> Result<(), anyhow::Error> {
         .map(|(i, v)| Place {
             alias: format!("p{}", i),
             indice: i,
-            max: v.clone(),
-            min: v.clone(),
+            max: *v,
+            min: *v,
         })
         .collect::<Vec<_>>();
 
@@ -189,7 +189,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let code_template = code_template.replace(
         "STATE_ASSIGN",
-        &format!("{}", vector_to_string(&m_init, "")),
+        &vector_to_string(&m_init, ""),
     );
 
     let code_template = code_template.replace(
@@ -199,9 +199,9 @@ fn main() -> Result<(), anyhow::Error> {
             .map(|(current, next)| {
                 format!(
                     "\t\ts={} : {{{}}};",
-                    vector_to_string(&current, ""),
+                    vector_to_string(current, ""),
                     next.iter()
-                        .map(|v| vector_to_string(&v, ""))
+                        .map(|v| vector_to_string(v, ""))
                         .collect::<Vec<_>>()
                         .join(",")
                 )
@@ -236,7 +236,7 @@ fn main() -> Result<(), anyhow::Error> {
             .join("\n\t\t"),
     );
 
-    fs::write(&args.output, &code_template)?;
+    fs::write(&args.output, code_template)?;
 
     
     
@@ -260,8 +260,8 @@ fn main() -> Result<(), anyhow::Error> {
             let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
 
             
-            dbg!(fs::write(&format!("{}.dot",&p),dot_template)?);
-            dbg!(fs::write(&format!("{}.svg",&p), graph_svg)?)
+            fs::write(format!("{}.dot",&p),dot_template)?;
+            fs::write(format!("{}.svg",&p), graph_svg)?
         
         },
         None => {},
