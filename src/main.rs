@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs, io
+    fs
 };
 use graphviz_rust::{parse, exec, printer::PrinterContext, cmd::Format};
 use thiserror::Error;
@@ -106,16 +106,18 @@ enum ErrorTypes {
 }
 
 
+
+
 #[derive(Debug,Parser)]
 /// Program that allows to convert a petri network to a Finite state automata
 /// using json to represent petri network and smv to represent the automata
 #[command(author,version)]
 struct Args {
     /// path to the source of the petri network
-    #[arg(short,long,default_value_t=("./petri.json".to_string()))]
+    #[arg(short,long,default_value_t=String::from("./petri.json"))]
     source:String,
     /// path to the output file
-    #[arg(short,long,default_value_t=("./automata.smv".to_string()))]
+    #[arg(short,long,default_value_t=String::from("./automata.smv"))]
     output:String,
     /// path to optional output as a dot file readable by graphviz
     #[arg(short,long)]
@@ -236,21 +238,31 @@ fn main() -> Result<(), anyhow::Error> {
 
     fs::write(&args.output, &code_template)?;
 
-    /// generating graph using graphviz
-    let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
-        .iter()
-        .map(|(k,v)| format!("{} -> {}",vector_to_string(k, ""),v.iter().map(|n| vector_to_string(n, "")).collect::<Vec<_>>().join(",")))
-        .collect::<Vec<_>>()
-        .join("\n\t\t"));
-
     
-    let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
-    let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
-
+    
+    // generating graph using graphviz
     match args.dot {
         Some(p) => {
+        
+            let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
+                .iter()
+                .map(|(k,v)| 
+                        format!("{} -> {}",vector_to_string(k, ""),
+                        v.iter()
+                            .map(|n| vector_to_string(n, ""))
+                            .collect::<Vec<_>>().join(","))
+                    )
+                .collect::<Vec<_>>()
+                .join("\n\t\t"));
+        
+        
+            let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+            let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
+
+            
             dbg!(fs::write(&format!("{}.dot",&p),dot_template)?);
             dbg!(fs::write(&format!("{}.svg",&p), graph_svg)?)
+        
         },
         None => {},
     };
