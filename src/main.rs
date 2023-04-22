@@ -241,30 +241,27 @@ fn main() -> Result<(), anyhow::Error> {
     
     
     // generating graph using graphviz
-    match args.dot {
-        Some(p) => {
-        
-            let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
-                .iter()
-                .map(|(k,v)| 
-                        format!("{} -> {}",vector_to_string(k, ""),
-                        v.iter()
-                            .map(|n| vector_to_string(n, ""))
-                            .collect::<Vec<_>>().join(","))
-                    )
-                .collect::<Vec<_>>()
-                .join("\n\t\t"));
-        
-        
-            let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
-            let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
+    if let Some(p) = args.dot {
 
-            
-            fs::write(format!("{}.dot",&p),dot_template)?;
-            fs::write(format!("{}.svg",&p), graph_svg)?
+        let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
+        .iter()
+        .map(|(k,v)| 
+                format!("{} -> {}",vector_to_string(k, ""),
+                v.iter()
+                    .map(|n| vector_to_string(n, ""))
+                    .collect::<Vec<_>>().join(","))
+            )
+        .collect::<Vec<_>>()
+        .join("\n\t\t"));
+
+
+        let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+        let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
+
         
-        },
-        None => {},
+        fs::write(format!("{}.dot",&p),dot_template)?;
+        fs::write(format!("{}.svg",&p), graph_svg)?
+
     };
 
     Ok(())
