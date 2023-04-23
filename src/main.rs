@@ -246,10 +246,9 @@ fn main() -> Result<(), anyhow::Error> {
         let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
         .iter()
         .map(|(k,v)| 
-                format!("{} -> {}",vector_to_string(k, ""),
                 v.iter()
-                    .map(|n| vector_to_string(n, ""))
-                    .collect::<Vec<_>>().join(","))
+                    .map(|n| format!(" \"{}\" -> \"{}\"", vector_to_string(k,"-"), vector_to_string(n,"-")))
+                    .collect::<Vec<_>>().join(",\n")
             )
         .collect::<Vec<_>>()
         .join("\n\t\t"));
