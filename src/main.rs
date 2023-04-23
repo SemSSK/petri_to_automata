@@ -102,6 +102,10 @@ enum ErrorTypes {
     #[error("Cannot assemble graph reason: {reason:?}")]
     CannotAssembleGraph {
         reason: String
+    },
+    #[error("Cannot generate graph as the transition {transition:?} will generate a graph of infinite nodes")]
+    PotentialInfiniteGraph {
+        transition: Vec<i32>
     }
 }
 
@@ -141,6 +145,12 @@ fn main() -> Result<(), anyhow::Error> {
 
     if transitions.iter().any(|t| t.len() != m_init.len()) {
         return Err(anyhow::Error::new(ErrorTypes::TransitionSizeNotMatching { expected: m_init.len()}))
+    }
+
+    for t in &transitions {
+        if t.iter().all(|x| *x >= 0) {
+            return Err(anyhow::Error::new(ErrorTypes::PotentialInfiniteGraph { transition: t.to_vec() }))
+        }
     }
 
     // CONSTRUCTION DU GRAPH DES MARQUAGES
@@ -248,7 +258,7 @@ fn main() -> Result<(), anyhow::Error> {
         .map(|(k,v)| 
                 v.iter()
                     .map(|n| format!(" \"{}\" -> \"{}\"", vector_to_string(k,"-"), vector_to_string(n,"-")))
-                    .collect::<Vec<_>>().join(",\n")
+                    .collect::<Vec<_>>().join(";\n")
             )
         .collect::<Vec<_>>()
         .join("\n\t\t"));
