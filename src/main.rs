@@ -1,13 +1,7 @@
-use std::{
-    collections::HashMap,
-    fs
-};
-use graphviz_rust::{parse, exec, printer::PrinterContext, cmd::Format};
-use thiserror::Error;
 use clap::*;
-// MADE IN 1h 40min
-
-use serde::Deserialize;
+use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
+use petri_to_automata::*;
+use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
     digraph {
@@ -93,45 +87,20 @@ fn vector_to_string(v: &Vec<i32>, sep: &str) -> String {
         .join(sep)
 }
 
-#[derive(Error,Debug)]
-enum ErrorTypes {
-    #[error("Transition vector size not matching number of places: expected {expected:?}")]
-    TransitionSizeNotMatching {
-        expected: usize
-    },
-    #[error("Cannot assemble graph reason: {reason:?}")]
-    CannotAssembleGraph {
-        reason: String
-    },
-    #[error("Cannot generate graph as the transition {transition:?} will generate a graph of infinite nodes")]
-    PotentialInfiniteGraph {
-        transition: Vec<i32>
-    }
-}
-
-
-
-
-#[derive(Debug,Parser)]
+#[derive(Debug, Parser)]
 /// Program that allows to convert a petri network to a Finite state automata
 /// using json to represent petri network and smv to represent the automata
-#[command(author,version)]
+#[command(author, version)]
 struct Args {
     /// path to the source of the petri network
     #[arg(short,long,default_value_t=String::from("./petri.json"))]
-    source:String,
+    source: String,
     /// path to the output file
     #[arg(short,long,default_value_t=String::from("./automata.smv"))]
-    output:String,
+    output: String,
     /// path to optional output as a dot file readable by graphviz
-    #[arg(short,long)]
-    dot:Option<String>
-}
-
-#[derive(Deserialize)]
-struct Input {
-    m_init: Vec<i32>,
-    transitions: Vec<Vec<i32>>,
+    #[arg(short, long)]
+    dot: Option<String>,
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -141,15 +110,23 @@ fn main() -> Result<(), anyhow::Error> {
     let Input {
         m_init,
         transitions,
-    } = serde_json::from_str(&petri).unwrap();
+    } = if petri.starts_with("{") {
+        serde_json::from_str(&petri)?
+    } else {
+        get_input_from_ndr(&petri)
+    };
 
     if transitions.iter().any(|t| t.len() != m_init.len()) {
-        return Err(anyhow::Error::new(ErrorTypes::TransitionSizeNotMatching { expected: m_init.len()}))
+        return Err(anyhow::Error::new(ErrorTypes::TransitionSizeNotMatching {
+            expected: m_init.len(),
+        }));
     }
 
     for t in &transitions {
         if t.iter().all(|x| *x >= 0) {
-            return Err(anyhow::Error::new(ErrorTypes::PotentialInfiniteGraph { transition: t.to_vec() }))
+            return Err(anyhow::Error::new(ErrorTypes::PotentialInfiniteGraph {
+                transition: t.to_vec(),
+            }));
         }
     }
 
@@ -197,10 +174,7 @@ fn main() -> Result<(), anyhow::Error> {
             .join("\n"),
     );
 
-    let code_template = code_template.replace(
-        "STATE_ASSIGN",
-        &vector_to_string(&m_init, ""),
-    );
+    let code_template = code_template.replace("STATE_ASSIGN", &vector_to_string(&m_init, ""));
 
     let code_template = code_template.replace(
         "STATE_TRANSITION",
@@ -248,29 +222,38 @@ fn main() -> Result<(), anyhow::Error> {
 
     fs::write(&args.output, code_template)?;
 
-    
-    
     // generating graph using graphviz
     if let Some(p) = args.dot {
+        let dot_template = DOT_TEMPLATE.replace(
+            "GRAPH",
+            &marquage_graph
+                .iter()
+                .map(|(k, v)| {
+                    v.iter()
+                        .map(|n| {
+                            format!(
+                                " \"{}\" -> \"{}\"",
+                                vector_to_string(k, "-"),
+                                vector_to_string(n, "-")
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(";\n")
+                })
+                .collect::<Vec<_>>()
+                .join("\n\t\t"),
+        );
 
-        let dot_template = DOT_TEMPLATE.replace("GRAPH", &marquage_graph
-        .iter()
-        .map(|(k,v)| 
-                v.iter()
-                    .map(|n| format!(" \"{}\" -> \"{}\"", vector_to_string(k,"-"), vector_to_string(n,"-")))
-                    .collect::<Vec<_>>().join(";\n")
-            )
-        .collect::<Vec<_>>()
-        .join("\n\t\t"));
+        let graph =
+            parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+        let graph_svg = exec(
+            graph,
+            &mut PrinterContext::default(),
+            vec![Format::Svg.into()],
+        )?;
 
-
-        let graph = parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
-        let graph_svg = exec(graph, &mut PrinterContext::default(),vec![Format::Svg.into()])?;
-
-        
-        fs::write(format!("{}.dot",&p),dot_template)?;
-        fs::write(format!("{}.svg",&p), graph_svg)?
-
+        fs::write(format!("{}.dot", &p), dot_template)?;
+        fs::write(format!("{}.svg", &p), graph_svg)?
     };
 
     Ok(())
