@@ -67,7 +67,7 @@ impl Place {
 
 fn generate_graph(
     m: Vec<Option<i32>>,
-    transitions: &Vec<Vec<i32>>,
+    transitions: &Vec<Vec<(i32,i32)>>,
     marquage_graph: &mut HashMap<Vec<Option<i32>>, Vec<Vec<Option<i32>>>>,
 ) {
     let mut next_ms = transitions
@@ -78,14 +78,16 @@ fn generate_graph(
             None => true,
         }))
         .collect::<Vec<Vec<_>>>();
-
     
+    // let mut verifiables = marquage_graph.keys().collect::<Vec<_>>();
+    // verifiables.push(&m); 
+
     for ms in marquage_graph.keys() {
         next_ms = next_ms.into_iter().map(|n_ms| 
                     if ms.iter()
                             .zip(n_ms.clone())
                             .all(|(m,n)| 
-                            m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
+                                m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
                                 ms.iter()
                                 .zip(n_ms)
                                 .map(|(m,n)| match (m,n) {
@@ -113,8 +115,13 @@ fn generate_graph(
     }
 }
 
-fn add_vector(u: &[i32], v: &[Option<i32>]) -> Vec<Option<i32>> {
-    u.iter().zip(v).map(|(x, y)| y.map(|y| y + x)).collect()
+fn add_vector(u: &[(i32,i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
+    u.iter().zip(v).map(
+        |((x1,x2), y)| y.map(|y| if y + x2 >= 0 {
+                y + x1
+            } else {
+                -1
+            })).collect()
 }
 
 fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {

@@ -16,7 +16,7 @@ pub enum ErrorTypes {
 pub struct Input {
     pub m_names: Vec<String>,
     pub m_init: Vec<Option<i32>>,
-    pub transitions: Vec<Vec<i32>>,
+    pub transitions: Vec<Vec<(i32,i32)>>,
 }
 
 

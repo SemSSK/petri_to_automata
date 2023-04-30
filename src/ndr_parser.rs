@@ -20,6 +20,7 @@ struct TransitionDetails {
     transition: String,
     place: String,
     value: i32,
+    input: i32
 }
 
 impl Tokens {
@@ -45,29 +46,38 @@ fn parse_relations(code: &str, declaration: &Vec<Tokens>) -> Vec<TransitionDetai
                     place: words.get(1).unwrap().to_string(),
                     transition: words.get(2).unwrap().to_string(),
                     value: -(words.get(3).unwrap().to_string().parse::<i32>().unwrap()),
+                    input: -(words.get(3).unwrap().to_string().parse::<i32>().unwrap())
                 },
                 Tokens::T(_) => TransitionDetails {
                     place: words.get(2).unwrap().to_string(),
                     transition: words.get(1).unwrap().to_string(),
                     value: (words.get(3).unwrap().to_string().parse::<i32>().unwrap()),
+                    input: 0
                 },
             }
         })
         .fold(vec![], move |acc, r| {
             match acc
                 .iter()
-                .find(|ar| ar.place == r.place && ar.transition == r.place)
+                .find(|ar| ar.place == r.place && ar.transition == r.transition)
             {
-                Some(ar) => {
+                Some(td) => {
                     let mut result = acc
                         .clone()
                         .into_iter()
-                        .filter(|r| r.place != ar.place && r.transition != ar.transition)
+                        .filter(|r| 
+                            {
+                                // dbg!(r.place != td.place);
+                                // println!("r = {},{} | td = {},{} , result = {},", r.place,r.transition,td.place,td.transition,(r.place != td.place) || (r.transition != td.transition));
+                                r.place != td.place || r.transition != td.transition
+                            }
+                        )
                         .collect::<Vec<_>>();
                     let new_transition = TransitionDetails {
-                        place: ar.place.to_string(),
-                        transition: ar.transition.to_string(),
-                        value: ar.value + r.value,
+                        place: td.place.to_string(),
+                        transition: td.transition.to_string(),
+                        value: td.value + r.value,
+                        input: td.input + r.input
                     };
                     result.push(new_transition);
                     result
@@ -120,7 +130,7 @@ fn extract_m_names(tokens: &Vec<Tokens>) -> Vec<&String> {
 fn extract_transitions(
     tokens: &Vec<Tokens>,
     transitions: &Vec<TransitionDetails>,
-) -> Vec<Vec<i32>> {
+) -> Vec<Vec<(i32,i32)>> {
     let m_names = extract_m_names(tokens);
     tokens
         .iter()
@@ -140,8 +150,8 @@ fn extract_transitions(
                 .map(|name| {
                     tds.iter()
                         .find(|td| td.place == **name)
-                        .map(|t| t.value)
-                        .unwrap_or(0)
+                        .map(|t| (t.value,t.input))
+                        .unwrap_or((0,0))
                 })
                 .collect::<Vec<_>>()
         })
