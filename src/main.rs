@@ -1,10 +1,12 @@
 use clap::*;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
 use petri_to_automata::*;
+use ndr_parser::*;
 use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
     digraph {
+        NAMING
         GRAPH
     }
 "#;
@@ -34,7 +36,15 @@ struct Place {
 }
 
 impl Place {
-    fn update(&self, v: i32) -> Self {
+    fn update(&self, v: Option<i32>) -> Self {
+        let Some(v) = v else {
+            return Self {
+                max: self.max,
+                indice: self.indice,
+                min: -1,
+                alias: self.alias.to_string(),
+            }
+        };
         if v > self.max {
             Self {
                 max: v,
@@ -56,16 +66,43 @@ impl Place {
 }
 
 fn generate_graph(
-    m: Vec<i32>,
+    m: Vec<Option<i32>>,
     transitions: &Vec<Vec<i32>>,
-    marquage_graph: &mut HashMap<Vec<i32>, Vec<Vec<i32>>>,
+    marquage_graph: &mut HashMap<Vec<Option<i32>>, Vec<Vec<Option<i32>>>>,
 ) {
-    let next_ms = transitions
+    let mut next_ms = transitions
         .iter()
         .map(|t| add_vector(t, &m))
-        .filter(|m| m.iter().all(|x| *x >= 0))
+        .filter(|m| m.iter().all(|x|  match x {
+            Some(x) => *x >= 0,
+            None => true,
+        }))
         .collect::<Vec<Vec<_>>>();
 
+    
+    for ms in marquage_graph.keys() {
+        next_ms = next_ms.into_iter().map(|n_ms| 
+                    if ms.iter()
+                            .zip(n_ms.clone())
+                            .all(|(m,n)| 
+                            m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
+                                ms.iter()
+                                .zip(n_ms)
+                                .map(|(m,n)| match (m,n) {
+                                    (Some(m), Some(n)) => if n - *m > 0 {
+                                        None
+                                    } else {
+                                        Some(n)
+                                    },
+                                    _ => None
+                                })
+                            .collect::<Vec<_>>()
+                        } else {
+                            n_ms
+                        })
+                    .collect::<Vec<_>>();
+            }
+            
     marquage_graph.insert(m, next_ms.clone());
 
     for mi in next_ms {
@@ -76,13 +113,16 @@ fn generate_graph(
     }
 }
 
-fn add_vector(u: &Vec<i32>, v: &Vec<i32>) -> Vec<i32> {
-    u.iter().zip(v).map(|(x, y)| x + y).collect()
+fn add_vector(u: &[i32], v: &[Option<i32>]) -> Vec<Option<i32>> {
+    u.iter().zip(v).map(|(x, y)| y.map(|y| y + x)).collect()
 }
 
-fn vector_to_string(v: &Vec<i32>, sep: &str) -> String {
+fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
     v.iter()
-        .map(|x| x.to_string())
+        .map(|x| match x {
+            Some(x) => x.to_string(),
+            None => "W".to_string(),
+        })
         .collect::<Vec<_>>()
         .join(sep)
 }
@@ -108,6 +148,7 @@ fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
     let petri = fs::read_to_string(&args.source)?;
     let Input {
+        m_names,
         m_init,
         transitions,
     } = if petri.starts_with("{") {
@@ -122,14 +163,6 @@ fn main() -> Result<(), anyhow::Error> {
         }));
     }
 
-    for t in &transitions {
-        if t.iter().all(|x| *x >= 0) {
-            return Err(anyhow::Error::new(ErrorTypes::PotentialInfiniteGraph {
-                transition: t.to_vec(),
-            }));
-        }
-    }
-
     // CONSTRUCTION DU GRAPH DES MARQUAGES
     let mut marquage_graph = HashMap::new();
     generate_graph(m_init.clone(), &transitions, &mut marquage_graph);
@@ -138,12 +171,13 @@ fn main() -> Result<(), anyhow::Error> {
     // GENERATION DES BORNES DES PLACES
     let places = m_init
         .iter()
+        .zip(&m_names)
         .enumerate()
-        .map(|(i, v)| Place {
-            alias: format!("p{}", i),
+        .map(|(i, (v,s))| Place {
+            alias: s.clone(),
             indice: i,
-            max: *v,
-            min: *v,
+            max: v.unwrap(),
+            min: v.unwrap(),
         })
         .collect::<Vec<_>>();
 
@@ -193,7 +227,7 @@ fn main() -> Result<(), anyhow::Error> {
             .collect::<Vec<_>>()
             .join("\n"),
     );
-
+    
     let code_template = code_template.replace(
         "PLACE_TRANSITION",
         &places
@@ -224,7 +258,8 @@ fn main() -> Result<(), anyhow::Error> {
 
     // generating graph using graphviz
     if let Some(p) = args.dot {
-        let dot_template = DOT_TEMPLATE.replace(
+        let dot_template = DOT_TEMPLATE.replace("NAMING", &format!("\"{}\"",m_names.join("-")));
+        let dot_template = dot_template.replace(
             "GRAPH",
             &marquage_graph
                 .iter()

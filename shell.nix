@@ -6,7 +6,6 @@ pkgs.mkShell {
         nusmv
         rustup
         cargo
-        llvmPackages.libclang
         pkgconfig
         openssl
         graphviz
