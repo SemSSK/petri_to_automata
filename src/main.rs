@@ -128,7 +128,7 @@ fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
     v.iter()
         .map(|x| match x {
             Some(x) => x.to_string(),
-            None => "W".to_string(),
+            None => "n".to_string(),
         })
         .collect::<Vec<_>>()
         .join(sep)
@@ -200,7 +200,7 @@ fn main() -> Result<(), anyhow::Error> {
             "{{{}}}",
             marquage_graph
                 .keys()
-                .map(|m| vector_to_string(m, ""))
+                .map(|m| format!("s{}",vector_to_string(m, "")))
                 .collect::<Vec<_>>()
                 .join(",")
         ),
@@ -210,12 +210,12 @@ fn main() -> Result<(), anyhow::Error> {
         "PLACES",
         &places
             .iter()
-            .map(|p| format!("\t\t{} : 0..{};", p.alias, /*p.min,*/ p.max))
+            .map(|p| format!("\t\t{} : {};", p.alias, /*p.min,*/ if p.max == p.min {format!("0..{}",p.max)} else {format!("{}..{}",p.min,p.max)}))
             .collect::<Vec<_>>()
             .join("\n"),
     );
 
-    let code_template = code_template.replace("STATE_ASSIGN", &vector_to_string(&m_init, ""));
+    let code_template = code_template.replace("STATE_ASSIGN", &format!("s{}",vector_to_string(&m_init, "")));
 
     let code_template = code_template.replace(
         "STATE_TRANSITION",
@@ -224,11 +224,15 @@ fn main() -> Result<(), anyhow::Error> {
             .map(|(current, next)| {
                 format!(
                     "\t\ts={} : {{{}}};",
-                    vector_to_string(current, ""),
-                    next.iter()
-                        .map(|v| vector_to_string(v, ""))
-                        .collect::<Vec<_>>()
-                        .join(",")
+                    format!("s{}",vector_to_string(current, "")),
+                    if next.len() > 0 {
+                        next.iter()
+                            .map(|v| format!("s{}",vector_to_string(v, "")))
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    } else {
+                        "s".to_string()
+                    }
                 )
             })
             .collect::<Vec<_>>()
@@ -246,12 +250,17 @@ fn main() -> Result<(), anyhow::Error> {
                     marquage_graph
                         .iter()
                         .map(|(current, next)| format!(
-                            "\t\ts={} : {{{}}};",
+                            "\t\ts=s{} : {{{}}};",
                             vector_to_string(current, ""),
-                            vector_to_string(
-                                &next.iter().map(|x| x[p.indice]).collect::<Vec<_>>(),
-                                ","
-                            )
+                            if next.len() > 0 {
+                                vector_to_string(
+                                    &next.iter().map(|x| match x[p.indice] {
+                                    Some(x) => Some(x),
+                                    None => Some(-1),
+                                }).collect::<Vec<_>>(),",")
+                            } else {
+                                p.alias.to_string()
+                            }
                         ))
                         .collect::<Vec<_>>()
                         .join("\n")
