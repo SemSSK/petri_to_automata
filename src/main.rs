@@ -78,17 +78,16 @@ fn generate_graph(
             None => true,
         }))
         .collect::<Vec<Vec<_>>>();
-    
-    // let mut verifiables = marquage_graph.keys().collect::<Vec<_>>();
-    // verifiables.push(&m); 
+
+    if m == vec![Some(0),Some(0),Some(1)] {
+        let a = 2;
+    }
 
     for ms in marquage_graph.keys() {
+
         next_ms = next_ms.into_iter().map(|n_ms| 
-                    if ms.iter()
-                            .zip(n_ms.clone())
-                            .all(|(m,n)| 
-                                m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
-                                ms.iter()
+                    if ms.iter().zip(n_ms.clone()).all(|(m,n)| m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
+                            ms.iter()
                                 .zip(n_ms)
                                 .map(|(m,n)| match (m,n) {
                                     (Some(m), Some(n)) => if n - *m > 0 {
@@ -96,15 +95,15 @@ fn generate_graph(
                                     } else {
                                         Some(n)
                                     },
-                                    _ => None
+                                    (_,op_n) => op_n
                                 })
-                            .collect::<Vec<_>>()
+                                .collect::<Vec<_>>()
                         } else {
                             n_ms
                         })
                     .collect::<Vec<_>>();
-            }
-            
+    }
+    
     marquage_graph.insert(m, next_ms.clone());
 
     for mi in next_ms {
@@ -140,7 +139,7 @@ fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
 #[command(author, version)]
 struct Args {
     /// path to the source of the petri network
-    #[arg(short,long,default_value_t=String::from("./petri.json"))]
+    #[arg(short,long,default_value_t=String::from("./net1.ndr"))]
     source: String,
     /// path to the output file
     #[arg(short,long,default_value_t=String::from("./automata.smv"))]
