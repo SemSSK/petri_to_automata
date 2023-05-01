@@ -1,7 +1,8 @@
 use clap::*;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
-use petri_to_automata::*;
+use iter_tools::Itertools;
 use ndr_parser::*;
+use petri_to_automata::*;
 use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
@@ -65,45 +66,94 @@ impl Place {
     }
 }
 
+fn get_parents_of_marking<'a>(
+    m: &'a Vec<Option<i32>>,
+    marquage_graph: &'a HashMap<Vec<Option<i32>>, Vec<Vec<Option<i32>>>>,
+    acc: &mut Vec<&'a Vec<Option<i32>>>,
+) -> Vec<&'a Vec<Option<i32>>> {
+    let mut parents: Vec<&Vec<Option<i32>>> = vec![];
+    acc.push(&m);
+    let keys = marquage_graph
+        .iter()
+        .filter(|(_, value)| value.contains(&m))
+        .map(|(key, _)| key)
+        .filter(|key| !acc.contains(key))
+        .collect::<Vec<_>>();
+    parents.append(&mut keys.clone());
+    for k in keys {
+        let mut local_parents = get_parents_of_marking(k, marquage_graph, acc);
+        parents.append(&mut local_parents);
+    }
+    parents
+}
+
 fn generate_graph(
     m: Vec<Option<i32>>,
-    transitions: &Vec<Vec<(i32,i32)>>,
+    transitions: &Vec<Vec<(i32, i32)>>,
     marquage_graph: &mut HashMap<Vec<Option<i32>>, Vec<Vec<Option<i32>>>>,
 ) {
     let mut next_ms = transitions
         .iter()
         .map(|t| add_vector(t, &m))
-        .filter(|m| m.iter().all(|x|  match x {
-            Some(x) => *x >= 0,
-            None => true,
-        }))
+        .filter(|m| {
+            m.iter().all(|x| match x {
+                Some(x) => *x >= 0,
+                None => true,
+            })
+        })
         .collect::<Vec<Vec<_>>>();
 
-    if m == vec![Some(0),Some(0),Some(1)] {
-        let a = 2;
-    }
+    marquage_graph.insert(m.clone(), next_ms.clone());
 
-    for ms in marquage_graph.keys() {
+    let binding = next_ms.clone();
+    let parents = binding
+        .iter()
+        .map(|n| (n, get_parents_of_marking(n, marquage_graph, &mut vec![])))
+        .collect::<Vec<_>>();
 
-        next_ms = next_ms.into_iter().map(|n_ms| 
-                    if ms.iter().zip(n_ms.clone()).all(|(m,n)| m.map_or(true, |m| n.map_or(true, |n| n >= m))) {
-                            ms.iter()
-                                .zip(n_ms)
-                                .map(|(m,n)| match (m,n) {
-                                    (Some(m), Some(n)) => if n - *m > 0 {
+    next_ms = parents
+        .into_iter()
+        .map(|(n, ps)| {
+            ps.into_iter()
+                .map(|p| {
+                    if p.iter()
+                        .zip(n)
+                        .all(|(xp, xn)| xn.map_or(true, |xn| xp.map_or(true, |xp| xn - xp >= 0)))
+                    {
+                        n.iter()
+                            .zip(p)
+                            .map(|(xn, xp)| match (xn, xp) {
+                                (Some(xn), Some(xp)) => {
+                                    if xn - xp > 0 {
                                         None
                                     } else {
-                                        Some(n)
-                                    },
-                                    (_,op_n) => op_n
-                                })
-                                .collect::<Vec<_>>()
-                        } else {
-                            n_ms
-                        })
-                    .collect::<Vec<_>>();
-    }
-    
+                                        Some(*xn)
+                                    }
+                                }
+                                (xn, _) => *xn,
+                            })
+                            .collect::<Vec<_>>()
+                    } else {
+                        n.to_vec()
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .map(|ns| {
+            ns.into_iter().reduce(|a, n| {
+                a.into_iter()
+                    .zip(n)
+                    .map(|(xa, xn)| match (xa, xn) {
+                        (None, _) | (_, None) => None,
+                        (_, xn) => xn,
+                    })
+                    .collect_vec()
+            })
+        })
+        .flatten()
+        .unique()
+        .collect::<Vec<_>>();
+
     marquage_graph.insert(m, next_ms.clone());
 
     for mi in next_ms {
@@ -114,13 +164,11 @@ fn generate_graph(
     }
 }
 
-fn add_vector(u: &[(i32,i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
-    u.iter().zip(v).map(
-        |((x1,x2), y)| y.map(|y| if y + x2 >= 0 {
-                y + x1
-            } else {
-                -1
-            })).collect()
+fn add_vector(u: &[(i32, i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
+    u.iter()
+        .zip(v)
+        .map(|((x1, x2), y)| y.map(|y| if y + x2 >= 0 { y + x1 } else { -1 }))
+        .collect()
 }
 
 fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
@@ -179,7 +227,7 @@ fn main() -> Result<(), anyhow::Error> {
         .iter()
         .zip(&m_names)
         .enumerate()
-        .map(|(i, (v,s))| Place {
+        .map(|(i, (v, s))| Place {
             alias: s.clone(),
             indice: i,
             max: v.unwrap(),
@@ -199,7 +247,7 @@ fn main() -> Result<(), anyhow::Error> {
             "{{{}}}",
             marquage_graph
                 .keys()
-                .map(|m| format!("s{}",vector_to_string(m, "")))
+                .map(|m| format!("s{}", vector_to_string(m, "")))
                 .collect::<Vec<_>>()
                 .join(",")
         ),
@@ -209,12 +257,26 @@ fn main() -> Result<(), anyhow::Error> {
         "PLACES",
         &places
             .iter()
-            .map(|p| format!("\t\t{} : {};", p.alias, /*p.min,*/ if p.max == p.min {format!("0..{}",p.max)} else {format!("{}..{}",p.min,p.max)}))
+            .map(|p| {
+                format!(
+                    "\t\t{} : {};",
+                    p.alias,
+                    /*p.min,*/
+                    if p.max == p.min {
+                        format!("0..{}", p.max)
+                    } else {
+                        format!("{}..{}", p.min, p.max)
+                    }
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n"),
     );
 
-    let code_template = code_template.replace("STATE_ASSIGN", &format!("s{}",vector_to_string(&m_init, "")));
+    let code_template = code_template.replace(
+        "STATE_ASSIGN",
+        &format!("s{}", vector_to_string(&m_init, "")),
+    );
 
     let code_template = code_template.replace(
         "STATE_TRANSITION",
@@ -223,10 +285,10 @@ fn main() -> Result<(), anyhow::Error> {
             .map(|(current, next)| {
                 format!(
                     "\t\ts={} : {{{}}};",
-                    format!("s{}",vector_to_string(current, "")),
+                    format!("s{}", vector_to_string(current, "")),
                     if next.len() > 0 {
                         next.iter()
-                            .map(|v| format!("s{}",vector_to_string(v, "")))
+                            .map(|v| format!("s{}", vector_to_string(v, "")))
                             .collect::<Vec<_>>()
                             .join(",")
                     } else {
@@ -237,7 +299,7 @@ fn main() -> Result<(), anyhow::Error> {
             .collect::<Vec<_>>()
             .join("\n"),
     );
-    
+
     let code_template = code_template.replace(
         "PLACE_TRANSITION",
         &places
@@ -253,10 +315,15 @@ fn main() -> Result<(), anyhow::Error> {
                             vector_to_string(current, ""),
                             if next.len() > 0 {
                                 vector_to_string(
-                                    &next.iter().map(|x| match x[p.indice] {
-                                    Some(x) => Some(x),
-                                    None => Some(-1),
-                                }).collect::<Vec<_>>(),",")
+                                    &next
+                                        .iter()
+                                        .map(|x| match x[p.indice] {
+                                            Some(x) => Some(x),
+                                            None => Some(-1),
+                                        })
+                                        .collect::<Vec<_>>(),
+                                    ",",
+                                )
                             } else {
                                 p.alias.to_string()
                             }
@@ -273,7 +340,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     // generating graph using graphviz
     if let Some(p) = args.dot {
-        let dot_template = DOT_TEMPLATE.replace("NAMING", &format!("\"{}\"",m_names.join("-")));
+        let dot_template = DOT_TEMPLATE.replace("NAMING", &format!("\"{}\"", m_names.join("-")));
         let dot_template = dot_template.replace(
             "GRAPH",
             &marquage_graph
@@ -302,7 +369,7 @@ fn main() -> Result<(), anyhow::Error> {
             vec![Format::Svg.into()],
         )?;
 
-        fs::write(format!("{}.dot", &p), dot_template)?;
+        // fs::write(format!("{}.dot", &p), dot_template)?;
         fs::write(format!("{}.svg", &p), graph_svg)?
     };
 

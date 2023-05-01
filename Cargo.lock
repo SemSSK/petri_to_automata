@@ -177,6 +177,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "545da7d6df7f8fd0de7106669a7d0bfa3dbcfa24d81da46906ad658188b2ff7c"
 
 [[package]]
+name = "either"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
 name = "errno"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -310,6 +316,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "iter_tools"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "531cafdc99b3b3252bb32f5620e61d56b19415efc19900b12d1b2e7483854897"
+dependencies = [
+ "itertools",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -384,6 +408,7 @@ dependencies = [
  "anyhow",
  "clap",
  "graphviz-rust",
+ "iter_tools",
  "serde",
  "serde_json",
  "thiserror",
