@@ -389,7 +389,8 @@ fn main() -> Result<(), anyhow::Error> {
         )?;
 
         // fs::write(format!("{}.dot", &p), dot_template)?;
-        fs::write(format!("{}.svg", &p), graph_svg)?
+        fs::write(format!("{}.svg", &p), graph_svg)?;
+        open::that(&format!("{}.svg", &p))?;
     };
 
     Ok(())
