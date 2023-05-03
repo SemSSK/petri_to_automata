@@ -40,7 +40,7 @@ impl Place {
     fn update(&self, v: Option<i32>) -> Self {
         let Some(v) = v else {
             return Self {
-                max: i32::MAX,
+                max: 1000,
                 indice: self.indice,
                 min: self.min,
                 alias: self.alias.to_string(),
@@ -324,7 +324,7 @@ fn main() -> Result<(), anyhow::Error> {
                     marquage_graph
                         .iter()
                         .map(|(current, next)| format!(
-                            "\t\ts=s_{} : p0 + {};",
+                            "\t\ts=s_{} : {{{}}};",
                             vector_to_string(current, "_"),
                             if next.len() > 0 {
                                 vector_to_string(
@@ -332,7 +332,7 @@ fn main() -> Result<(), anyhow::Error> {
                                         .iter()
                                         .map(|(t, x)| match x[p.indice] {
                                             Some(x) => Some(x),
-                                            None => Some(i32::MAX),
+                                            None => Some(1000),
                                         })
                                         .collect::<Vec<_>>(),
                                     ",",

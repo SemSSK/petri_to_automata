@@ -1,0 +1,22 @@
+
+MODULE main
+    VAR
+        s : {s_1_0,s_1_n};
+		p0 : 0..1;
+		p1 : 0..1000;
+    ASSIGN
+        init(s) := s_1_0;
+
+        next(s) := case
+		s=s_1_0 : {s_1_n};
+		s=s_1_n : {s_1_n};
+        esac;
+        
+        next(p0) := case
+ 		s=s_1_0 : {1};
+		s=s_1_n : {1}; 
+		esac;
+		next(p1) := case
+ 		s=s_1_0 : {1000};
+		s=s_1_n : {1000}; 
+		esac;
