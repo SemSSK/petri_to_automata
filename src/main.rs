@@ -75,7 +75,7 @@ fn get_parents_of_marking<'a>(
     acc.push(&m);
     let keys = marquage_graph
         .iter()
-        .filter(|(_, value)| value.iter().map(|(t, v)| v).contains(&m))
+        .filter(|(_, value)| value.iter().map(|(_, v)| v).contains(&m))
         .map(|(key, _)| key)
         .filter(|key| !acc.contains(key))
         .collect::<Vec<_>>();
@@ -100,7 +100,7 @@ fn generate_graph(
                 add_vector(t, &m),
             )
         })
-        .filter(|(t, m)| {
+        .filter(|(_, m)| {
             m.iter().all(|x| match x {
                 Some(x) => *x >= 0,
                 None => true,
@@ -153,7 +153,7 @@ fn generate_graph(
                 .collect::<Vec<_>>()
         })
         .map(|ns| {
-            ns.into_iter().reduce(|(t, a), (t1, n)| {
+            ns.into_iter().reduce(|(t, a), (_, n)| {
                 (
                     t,
                     a.into_iter()
@@ -254,131 +254,129 @@ fn main() -> Result<(), anyhow::Error> {
         ps.iter().zip(k).map(|(p, x)| p.update(*x)).collect()
     });
 
-    let code_template = CODE_TEMPLATE.replace(
-        "STATES",
-        &format!(
-            "{{{}}}",
-            marquage_graph
-                .keys()
-                .map(|m| format!("s_{}", vector_to_string(m, "_")))
+    let code_template = CODE_TEMPLATE
+        .replace(
+            "STATES",
+            &format!(
+                "{{{}}}",
+                marquage_graph
+                    .keys()
+                    .map(|m| format!("s_{}", vector_to_string(m, "_")))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+        )
+        .replace(
+            "PLACES",
+            &places
+                .iter()
+                .map(|p| {
+                    format!(
+                        "\t\t{} : {};",
+                        p.alias,
+                        /*p.min,*/
+                        if p.max == p.min {
+                            format!("0..{}", p.max)
+                        } else {
+                            format!("{}..{}", p.min, p.max)
+                        }
+                    )
+                })
                 .collect::<Vec<_>>()
-                .join(",")
-        ),
-    );
-
-    let code_template = code_template.replace(
-        "PLACES",
-        &places
-            .iter()
-            .map(|p| {
-                format!(
-                    "\t\t{} : {};",
-                    p.alias,
-                    /*p.min,*/
-                    if p.max == p.min {
-                        format!("0..{}", p.max)
-                    } else {
-                        format!("{}..{}", p.min, p.max)
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n"),
-    );
-
-    let code_template = code_template.replace(
-        "STATE_ASSIGN",
-        &format!("s_{}", vector_to_string(&m_init, "_")),
-    );
-
-    let code_template = code_template.replace(
-        "STATE_TRANSITION",
-        &marquage_graph
-            .iter()
-            .map(|(current, next)| {
-                format!(
-                    "\t\ts={} : {{{}}};",
-                    format!("s_{}", vector_to_string(current, "_")),
-                    if next.len() > 0 {
-                        next.iter()
-                            .map(|(t, v)| format!("s_{}", vector_to_string(v, "_")))
+                .join("\n"),
+        )
+        .replace(
+            "STATE_ASSIGN",
+            &format!("s_{}", vector_to_string(&m_init, "_")),
+        )
+        .replace(
+            "STATE_TRANSITION",
+            &marquage_graph
+                .iter()
+                .map(|(current, next)| {
+                    format!(
+                        "\t\ts={} : {{{}}};",
+                        format!("s_{}", vector_to_string(current, "_")),
+                        if next.len() > 0 {
+                            next.iter()
+                                .map(|(_, v)| format!("s_{}", vector_to_string(v, "_")))
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        } else {
+                            "s".to_string()
+                        }
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+        .replace(
+            "PLACE_TRANSITION",
+            &places
+                .iter()
+                .map(|p| {
+                    format!(
+                        "next({}) := case\n {} \n\t\tesac;",
+                        p.alias,
+                        marquage_graph
+                            .iter()
+                            .map(|(current, next)| format!(
+                                "\t\ts=s_{} : {{{}}};",
+                                vector_to_string(current, "_"),
+                                if next.len() > 0 {
+                                    vector_to_string(
+                                        &next
+                                            .iter()
+                                            .map(|(_, x)| match x[p.indice] {
+                                                Some(x) => Some(x),
+                                                None => Some(1000),
+                                            })
+                                            .collect::<Vec<_>>(),
+                                        ",",
+                                    )
+                                } else {
+                                    p.alias.to_string()
+                                }
+                            ))
                             .collect::<Vec<_>>()
-                            .join(",")
-                    } else {
-                        "s".to_string()
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n"),
-    );
-
-    let code_template = code_template.replace(
-        "PLACE_TRANSITION",
-        &places
-            .iter()
-            .map(|p| {
-                format!(
-                    "next({}) := case\n {} \n\t\tesac;",
-                    p.alias,
-                    marquage_graph
-                        .iter()
-                        .map(|(current, next)| format!(
-                            "\t\ts=s_{} : {{{}}};",
-                            vector_to_string(current, "_"),
-                            if next.len() > 0 {
-                                vector_to_string(
-                                    &next
-                                        .iter()
-                                        .map(|(t, x)| match x[p.indice] {
-                                            Some(x) => Some(x),
-                                            None => Some(1000),
-                                        })
-                                        .collect::<Vec<_>>(),
-                                    ",",
-                                )
-                            } else {
-                                p.alias.to_string()
-                            }
-                        ))
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n\t\t"),
-    );
+                            .join("\n")
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n\t\t"),
+        );
 
     fs::write(&args.output, code_template)?;
 
     // generating graph using graphviz
     if let Some(p) = args.dot {
-        let dot_template = DOT_TEMPLATE.replace("NAMING", &format!("\"{}\"", m_names.join("-")));
-        let dot_template = dot_template.replace(
-            "GRAPH",
-            &marquage_graph
-                .iter()
-                .map(|(k, v)| {
-                    v.iter()
-                        .map(|(t, n)| {
-                            format!(
-                                " \"{}\" -> \"{}\" [label = \"t{}\"]",
-                                vector_to_string(k, "-"),
-                                vector_to_string(n, "-"),
-                                transitions
-                                    .iter()
-                                    .enumerate()
-                                    .find(|(_, x)| x.iter().zip(t).all(|((x, _), t)| t == x))
-                                    .unwrap()
-                                    .0
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                        .join(";\n")
-                })
-                .collect::<Vec<_>>()
-                .join("\n\t\t"),
-        );
+        let dot_template = DOT_TEMPLATE
+            .replace("NAMING", &format!("\"{}\"", m_names.join("-")))
+            .replace(
+                "GRAPH",
+                &marquage_graph
+                    .iter()
+                    .map(|(k, v)| {
+                        v.iter()
+                            .map(|(t, n)| {
+                                format!(
+                                    " \"{}\" -> \"{}\" [label = \"t{}\"]",
+                                    vector_to_string(k, "-"),
+                                    vector_to_string(n, "-"),
+                                    transitions
+                                        .iter()
+                                        .enumerate()
+                                        .find(|(_, x)| x.iter().zip(t).all(|((x, _), t)| t == x))
+                                        .unwrap()
+                                        .0
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join(";\n")
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n\t\t"),
+            );
 
         let graph =
             parse(&dot_template).map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
