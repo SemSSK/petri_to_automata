@@ -20,7 +20,7 @@ struct TransitionDetails {
     transition: String,
     place: String,
     value: i32,
-    input: i32
+    input: i32,
 }
 
 impl Tokens {
@@ -46,13 +46,13 @@ fn parse_relations(code: &str, declaration: &Vec<Tokens>) -> Vec<TransitionDetai
                     place: words.get(1).unwrap().to_string(),
                     transition: words.get(2).unwrap().to_string(),
                     value: -(words.get(3).unwrap().to_string().parse::<i32>().unwrap()),
-                    input: -(words.get(3).unwrap().to_string().parse::<i32>().unwrap())
+                    input: -(words.get(3).unwrap().to_string().parse::<i32>().unwrap()),
                 },
                 Tokens::T(_) => TransitionDetails {
                     place: words.get(2).unwrap().to_string(),
                     transition: words.get(1).unwrap().to_string(),
                     value: (words.get(3).unwrap().to_string().parse::<i32>().unwrap()),
-                    input: 0
+                    input: 0,
                 },
             }
         })
@@ -65,19 +65,17 @@ fn parse_relations(code: &str, declaration: &Vec<Tokens>) -> Vec<TransitionDetai
                     let mut result = acc
                         .clone()
                         .into_iter()
-                        .filter(|r| 
-                            {
-                                // dbg!(r.place != td.place);
-                                // println!("r = {},{} | td = {},{} , result = {},", r.place,r.transition,td.place,td.transition,(r.place != td.place) || (r.transition != td.transition));
-                                r.place != td.place || r.transition != td.transition
-                            }
-                        )
+                        .filter(|r| {
+                            // dbg!(r.place != td.place);
+                            // println!("r = {},{} | td = {},{} , result = {},", r.place,r.transition,td.place,td.transition,(r.place != td.place) || (r.transition != td.transition));
+                            r.place != td.place || r.transition != td.transition
+                        })
                         .collect::<Vec<_>>();
                     let new_transition = TransitionDetails {
                         place: td.place.to_string(),
                         transition: td.transition.to_string(),
                         value: td.value + r.value,
-                        input: td.input + r.input
+                        input: td.input + r.input,
                     };
                     result.push(new_transition);
                     result
@@ -130,7 +128,7 @@ fn extract_m_names(tokens: &Vec<Tokens>) -> Vec<&String> {
 fn extract_transitions(
     tokens: &Vec<Tokens>,
     transitions: &Vec<TransitionDetails>,
-) -> Vec<Vec<(i32,i32)>> {
+) -> Vec<Vec<(i32, i32)>> {
     let m_names = extract_m_names(tokens);
     tokens
         .iter()
@@ -150,8 +148,8 @@ fn extract_transitions(
                 .map(|name| {
                     tds.iter()
                         .find(|td| td.place == **name)
-                        .map(|t| (t.value,t.input))
-                        .unwrap_or((0,0))
+                        .map(|t| (t.value, t.input))
+                        .unwrap_or((0, 0))
                 })
                 .collect::<Vec<_>>()
         })
@@ -161,9 +159,15 @@ fn extract_transitions(
 pub fn get_input_from_ndr(code: &str) -> Input {
     let tokens = parse_tokens_declarations(code);
     let relations = parse_relations(code, &tokens);
-    let m_init = extract_m_init(&tokens).into_iter().map(|x| Some(x)).collect::<Vec<_>>();
+    let m_init = extract_m_init(&tokens)
+        .into_iter()
+        .map(|x| Some(x))
+        .collect::<Vec<_>>();
     let transitions = extract_transitions(&tokens, &relations);
-    let m_names = extract_m_names(&tokens).into_iter().map(|s| s.clone()).collect::<Vec<_>>();
+    let m_names = extract_m_names(&tokens)
+        .into_iter()
+        .map(|s| s.clone())
+        .collect::<Vec<_>>();
     Input {
         m_names,
         m_init,
