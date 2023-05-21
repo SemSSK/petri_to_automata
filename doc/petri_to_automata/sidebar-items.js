@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CODE_TEMPLATE","DOT_TEMPLATE"],"fn":["main"],"mod":["graph_gen","ndr_parser"],"static":["DEFAULT_VALUE"],"struct":["Args"]};

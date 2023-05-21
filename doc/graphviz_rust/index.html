@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The library allows to interact with `graphviz` format."><title>graphviz_rust - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../static.files/ayu-be46fdc453a55015.css"><script src="../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../graphviz_rust/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../graphviz_rust/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate graphviz_rust</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.6.2</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#reexports">Re-exports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#functions">Functions</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">graphviz_rust</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/graphviz_rust/lib.rs.html#1-294">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The library allows to interact with <a href="https://graphviz.org/"><code>graphviz</code></a> format.</p>
+<h2 id="description"><a href="#description">Description:</a></h2>
+<p>Essentially, it starts from 3 base methods:</p>
+<ul>
+<li>parse: a source of a dot file in the dot <a href="https://graphviz.org/doc/info/lang.html"><code>notation</code></a>. The output format is a <a href="../dot_structures/enum.Graph.html" title="enum dot_structures::Graph">Graph</a>.</li>
+<li>print: <a href="../dot_structures/enum.Graph.html" title="enum dot_structures::Graph">Graph</a> and <a href="printer/trait.DotPrinter.html" title="trait graphviz_rust::printer::DotPrinter">DotPrinter</a> provides an ability to transform a graph into string
+following the <a href="https://graphviz.org/doc/info/lang.html"><code>notation</code></a></li>
+<li>exec: an ability to <a href="https://graphviz.org/doc/info/command.html"><code>execute</code></a> a cmd graphviz engine into different formats and etc.</li>
+<li>exec_dot: an ability to <a href="https://graphviz.org/doc/info/command.html"><code>execute</code></a> a cmd graphviz engine into different formats from a prepared string containing a dot graph.</li>
+</ul>
+<h2 id="examples"><a href="#examples">Examples:</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dot_generator::<span class="kw-2">*</span>;
+<span class="kw">use </span>dot_structures::<span class="kw-2">*</span>;
+<span class="kw">use </span>graphviz_rust::{
+    attributes::<span class="kw-2">*</span>,
+    cmd::{CommandArg, Format},
+    exec, exec_dot, parse,
+    printer::{DotPrinter, PrinterContext},
+};
+
+<span class="kw">fn </span>parse_test() {
+    <span class="kw">let </span>g: Graph = parse(
+        <span class="string">r#&quot;
+        strict digraph t {
+            aa[color=green]
+            subgraph v {
+                aa[shape=square]
+                subgraph vv{a2 -&gt; b2}
+                aaa[color=red]
+                aaa -&gt; bbb
+            }
+            aa -&gt; be -&gt; subgraph v { d -&gt; aaa}
+            aa -&gt; aaa -&gt; v
+        }
+        &quot;#</span>,
+    )
+    .unwrap();
+
+    <span class="macro">assert_eq!</span>(
+        g,
+        <span class="macro">graph!</span>(strict di <span class="macro">id!</span>(<span class="string">&quot;t&quot;</span>);
+          <span class="macro">node!</span>(<span class="string">&quot;aa&quot;</span>;<span class="macro">attr!</span>(<span class="string">&quot;color&quot;</span>,<span class="string">&quot;green&quot;</span>)),
+          <span class="macro">subgraph!</span>(<span class="string">&quot;v&quot;</span>;
+            <span class="macro">node!</span>(<span class="string">&quot;aa&quot;</span>; <span class="macro">attr!</span>(<span class="string">&quot;shape&quot;</span>,<span class="string">&quot;square&quot;</span>)),
+            <span class="macro">subgraph!</span>(<span class="string">&quot;vv&quot;</span>; <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;a2&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;b2&quot;</span>))),
+            <span class="macro">node!</span>(<span class="string">&quot;aaa&quot;</span>;<span class="macro">attr!</span>(<span class="string">&quot;color&quot;</span>,<span class="string">&quot;red&quot;</span>)),
+            <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;aaa&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;bbb&quot;</span>))
+            ),
+          <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;aa&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;be&quot;</span>) =&gt; <span class="macro">subgraph!</span>(<span class="string">&quot;v&quot;</span>; <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;d&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;aaa&quot;</span>)))),
+          <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;aa&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;aaa&quot;</span>) =&gt; <span class="macro">node_id!</span>(<span class="string">&quot;v&quot;</span>))
+        )
+    )
+}
+
+<span class="kw">fn </span>print_test() {
+    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">graph!</span>(strict di <span class="macro">id!</span>(<span class="string">&quot;id&quot;</span>));
+    <span class="macro">assert_eq!</span>(
+        <span class="string">&quot;strict digraph id {}&quot;</span>.to_string(),
+        g.print(<span class="kw-2">&amp;mut </span>PrinterContext::default())
+    );
+}
+
+<span class="kw">fn </span>output_test() {
+    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">graph!</span>(<span class="macro">id!</span>(<span class="string">&quot;id&quot;</span>);
+         <span class="macro">node!</span>(<span class="string">&quot;nod&quot;</span>),
+         <span class="macro">subgraph!</span>(<span class="string">&quot;sb&quot;</span>;
+             <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;a&quot;</span>) =&gt; <span class="macro">subgraph!</span>(;
+                <span class="macro">node!</span>(<span class="string">&quot;n&quot;</span>;
+                NodeAttributes::color(color_name::black), NodeAttributes::shape(shape::egg))
+            ))
+        ),
+        <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;a1&quot;</span>) =&gt; <span class="macro">node_id!</span>(esc <span class="string">&quot;a2&quot;</span>))
+    );
+    <span class="kw">let </span>graph_svg = exec(
+        g,
+        <span class="kw-2">&amp;mut </span>PrinterContext::default(),
+        <span class="macro">vec!</span>[Format::Svg.into()],
+    )
+    .unwrap();
+}
+<span class="kw">fn </span>output_exec_from_test() {
+    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">graph!</span>(<span class="macro">id!</span>(<span class="string">&quot;id&quot;</span>);
+         <span class="macro">node!</span>(<span class="string">&quot;nod&quot;</span>),
+         <span class="macro">subgraph!</span>(<span class="string">&quot;sb&quot;</span>;
+             <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;a&quot;</span>) =&gt; <span class="macro">subgraph!</span>(;
+                <span class="macro">node!</span>(<span class="string">&quot;n&quot;</span>;
+                NodeAttributes::color(color_name::black), NodeAttributes::shape(shape::egg))
+            ))
+        ),
+        <span class="macro">edge!</span>(<span class="macro">node_id!</span>(<span class="string">&quot;a1&quot;</span>) =&gt; <span class="macro">node_id!</span>(esc <span class="string">&quot;a2&quot;</span>))
+    );
+    <span class="kw">let </span>dot = g.print(<span class="kw-2">&amp;mut </span>PrinterContext::default());
+    <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, dot);
+    <span class="kw">let </span>format = Format::Svg;
+
+    <span class="kw">let </span>graph_svg = exec_dot(dot.clone(), <span class="macro">vec!</span>[format.into()]).unwrap();
+
+    <span class="kw">let </span>graph_svg = exec_dot(dot, <span class="macro">vec!</span>[format.clone().into()]).unwrap();
+}</code></pre></div>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2><ul class="item-table"><li><div class="item-name"><code>pub extern crate <a class="mod" href="../dot_generator/index.html" title="mod dot_generator">dot_generator</a>;</code></div></li><li><div class="item-name"><code>pub extern crate <a class="mod" href="../dot_structures/index.html" title="mod dot_structures">dot_structures</a>;</code></div></li><li><div class="item-name"><code>pub extern crate <a class="mod" href="../into_attr/index.html" title="mod into_attr">into_attr</a>;</code></div></li><li><div class="item-name"><code>pub extern crate <a class="mod" href="../into_attr_derive/index.html" title="mod into_attr_derive">into_attr_derive</a>;</code></div></li></ul><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="attributes/index.html" title="mod graphviz_rust::attributes">attributes</a></div><div class="desc docblock-short">graphviz <a href="https://graphviz.org/doc/info/attrs.html"><code>attributes</code></a></div></li><li><div class="item-name"><a class="mod" href="cmd/index.html" title="mod graphviz_rust::cmd">cmd</a></div><div class="desc docblock-short">It allows to execute cmd engine passing extra parameters</div></li><li><div class="item-name"><a class="mod" href="printer/index.html" title="mod graphviz_rust::printer">printer</a></div><div class="desc docblock-short">It allows to transform a graph into a string carrying dot info according
+to the notation.</div></li></ul><h2 id="macros" class="small-section-header"><a href="#macros">Macros</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.as_item.html" title="macro graphviz_rust::as_item">as_item</a></div></li><li><div class="item-name"><a class="macro" href="macro.generate_attr.html" title="macro graphviz_rust::generate_attr">generate_attr</a></div></li></ul><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2><ul class="item-table"><li><div class="item-name"><a class="fn" href="fn.exec.html" title="fn graphviz_rust::exec">exec</a></div><div class="desc docblock-short">Executes a given graph using a dot cmd client</div></li><li><div class="item-name"><a class="fn" href="fn.exec_dot.html" title="fn graphviz_rust::exec_dot">exec_dot</a></div><div class="desc docblock-short">Executes a given string representation of the graph using a dot cmd client</div></li><li><div class="item-name"><a class="fn" href="fn.parse.html" title="fn graphviz_rust::parse">parse</a></div><div class="desc docblock-short">Parses a given string into a graph format that can be used afterwards or returning
+an string with an error description</div></li><li><div class="item-name"><a class="fn" href="fn.print.html" title="fn graphviz_rust::print">print</a></div><div class="desc docblock-short">Prints a given graph according to a given <a href="printer/struct.PrinterContext.html" title="struct graphviz_rust::printer::PrinterContext"><code>PrinterContext</code></a></div></li></ul></section></div></main><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="graphviz_rust" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

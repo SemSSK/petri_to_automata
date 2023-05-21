@@ -1,8 +1,71 @@
+/// Generates the marquage graph and the NuSMV code from a Petri network
+/// ## Inputs
+/// Takes the petri network as a :
+///
+/// ### JSON file
+/// #### Example
+/// ```json
+///     {
+///   "m_names": [
+///     "A",
+///     "B",
+///     "C"
+///   ],
+///   "m_init": [
+///     1,
+///     0,
+///     2
+///   ],
+///   "transitions": [
+///     [
+///       [
+///         0,
+///         0
+///       ],
+///       [
+///         -2,
+///         -2
+///       ],
+///       [
+///         2,
+///         0
+///       ]
+///     ],
+///     [
+///       [
+///         -1,
+///         -1
+///       ],
+///       [
+///         1,
+///         0
+///       ],
+///       [
+///         0,
+///         0
+///       ]
+///     ]
+///   ]
+/// }
+/// ```
+/// ### As a Tina Ndr file:
+/// #### Example
+/// p 215.0 210.0 p0 4 n
+/// p 30.0 50.0 p1 1 n
+/// t 55.0 180.0 t0 0 w n
+/// t 185.0 60.0 t1 0 w n
+/// e t1 p1 1 n
+/// e p0 t1 1 n
+/// e t0 p1 1 n
+/// e p0 t0 2 n
+/// h test
+pub mod graph_gen;
+/// Module used to parse ndr file
+pub mod ndr_parser;
+
+use crate::{graph_gen::*, ndr_parser::*};
 use clap::*;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
-use iter_tools::Itertools;
-use ndr_parser::*;
-use petri_to_automata::*;
 use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
@@ -28,180 +91,11 @@ STATE_TRANSITION
 
 "#;
 
-#[derive(Debug, Clone)]
-struct Place {
-    alias: String,
-    indice: usize,
-    min: i32,
-    max: i32,
-}
-
-impl Place {
-    fn update(&self, v: Option<i32>) -> Self {
-        let Some(v) = v else {
-            return Self {
-                max: 1000,
-                indice: self.indice,
-                min: self.min,
-                alias: self.alias.to_string(),
-            }
-        };
-        if v > self.max {
-            Self {
-                max: v,
-                indice: self.indice,
-                min: self.min,
-                alias: self.alias.to_string(),
-            }
-        } else if v < self.min {
-            Self {
-                max: self.max,
-                indice: self.indice,
-                min: v,
-                alias: self.alias.to_string(),
-            }
-        } else {
-            self.clone()
-        }
-    }
-}
-
-fn get_parents_of_marking<'a>(
-    m: &'a Vec<Option<i32>>,
-    marquage_graph: &'a HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
-    acc: &mut Vec<&'a Vec<Option<i32>>>,
-) -> Vec<&'a Vec<Option<i32>>> {
-    let mut parents: Vec<&Vec<Option<i32>>> = vec![];
-    acc.push(&m);
-    let keys = marquage_graph
-        .iter()
-        .filter(|(_, value)| value.iter().map(|(_, v)| v).contains(&m))
-        .map(|(key, _)| key)
-        .filter(|key| !acc.contains(key))
-        .collect::<Vec<_>>();
-    parents.append(&mut keys.clone());
-    for k in keys {
-        let mut local_parents = get_parents_of_marking(k, marquage_graph, acc);
-        parents.append(&mut local_parents);
-    }
-    parents
-}
-
-fn generate_graph(
-    m: Vec<Option<i32>>,
-    transitions: &Vec<Vec<(i32, i32)>>,
-    marquage_graph: &mut HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
-) {
-    let mut next_ms = transitions
-        .iter()
-        .map(|t| {
-            (
-                t.iter().map(|(t, _)| *t).collect::<Vec<_>>(),
-                add_vector(t, &m),
-            )
-        })
-        .filter(|(_, m)| {
-            m.iter().all(|x| match x {
-                Some(x) => *x >= 0,
-                None => true,
-            })
-        })
-        .collect::<Vec<_>>();
-
-    marquage_graph.insert(m.clone(), next_ms.clone());
-
-    let binding = next_ms.clone();
-    let parents = binding
-        .iter()
-        .map(|(t, n)| {
-            (
-                (t, n),
-                get_parents_of_marking(n, marquage_graph, &mut vec![]),
-            )
-        })
-        .collect::<Vec<_>>();
-
-    next_ms = parents
-        .into_iter()
-        .map(|((t, n), ps)| {
-            ps.into_iter()
-                .map(|p| {
-                    if p.iter()
-                        .zip(n)
-                        .all(|(xp, xn)| xn.map_or(true, |xn| xp.map_or(true, |xp| xn - xp >= 0)))
-                    {
-                        (
-                            t.to_vec(),
-                            n.iter()
-                                .zip(p)
-                                .map(|(xn, xp)| match (xn, xp) {
-                                    (Some(xn), Some(xp)) => {
-                                        if xn - xp > 0 {
-                                            None
-                                        } else {
-                                            Some(*xn)
-                                        }
-                                    }
-                                    (xn, _) => *xn,
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                    } else {
-                        (t.to_vec(), n.to_vec())
-                    }
-                })
-                .collect::<Vec<_>>()
-        })
-        .map(|ns| {
-            ns.into_iter().reduce(|(t, a), (_, n)| {
-                (
-                    t,
-                    a.into_iter()
-                        .zip(n)
-                        .map(|(xa, xn)| match (xa, xn) {
-                            (None, _) | (_, None) => None,
-                            (_, xn) => xn,
-                        })
-                        .collect_vec(),
-                )
-            })
-        })
-        .flatten()
-        .unique()
-        .collect::<Vec<_>>();
-
-    marquage_graph.insert(m, next_ms.clone());
-
-    for (_, mi) in next_ms {
-        match marquage_graph.get(&mi) {
-            Some(_) => (),
-            None => generate_graph(mi, transitions, marquage_graph),
-        }
-    }
-}
-
-fn add_vector(u: &[(i32, i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
-    u.iter()
-        .zip(v)
-        .map(|((x1, x2), y)| y.map(|y| if y + x2 >= 0 { y + x1 } else { -1 }))
-        .collect()
-}
-
-fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
-    v.iter()
-        .map(|x| match x {
-            Some(x) => x.to_string(),
-            None => "n".to_string(),
-        })
-        .collect::<Vec<_>>()
-        .join(sep)
-}
-
 #[derive(Debug, Parser)]
 /// Program that allows to convert a petri network to a Finite state automata
 /// using json to represent petri network and smv to represent the automata
 #[command(author, version)]
-struct Args {
+pub struct Args {
     /// path to the source of the petri network
     #[arg(short,long,default_value_t=String::from("./net1.ndr"))]
     source: String,

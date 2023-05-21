@@ -156,6 +156,11 @@ fn extract_transitions(
         .collect::<Vec<_>>()
 }
 
+/// generates inputs from ndr code
+/// ## Input
+/// `code:&str`: string slice containing ndr file code
+/// ## Output
+/// `Input`: containing the necessary data to generate a marquage graph
 pub fn get_input_from_ndr(code: &str) -> Input {
     let tokens = parse_tokens_declarations(code);
     let relations = parse_relations(code, &tokens);

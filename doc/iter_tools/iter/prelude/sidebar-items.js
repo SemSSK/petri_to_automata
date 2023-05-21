@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Diff","Either","EitherOrBoth","FoldWhile","MinMaxResult","Position"],"trait":["Itertools","PeekingNext"]};
