@@ -210,26 +210,16 @@ fn main() -> Result<(), anyhow::Error> {
                 .iter()
                 .map(|p| {
                     format!(
-                        "next({}) := case\n {} \n\t\tesac;",
+                        "{} := case\n {} \n\t\tesac;",
                         p.alias,
                         marquage_graph
-                            .iter()
-                            .map(|(current, next)| format!(
+                            .keys()
+                            .map(|current| format!(
                                 "\t\ts=s_{} : {{{}}};",
                                 vector_to_string(current, "_"),
-                                if next.len() > 0 {
-                                    vector_to_string(
-                                        &next
-                                            .iter()
-                                            .map(|(_, x)| match x[p.indice] {
-                                                Some(x) => Some(x),
-                                                None => Some(1000),
-                                            })
-                                            .collect::<Vec<_>>(),
-                                        ",",
-                                    )
-                                } else {
-                                    p.alias.to_string()
+                                match current[p.indice] {
+                                    Some(x) => x,
+                                    None => p.max,
                                 }
                             ))
                             .collect::<Vec<_>>()

@@ -1,0 +1,27 @@
+p 470.0 105.0 baguette1 1 n
+p 475.0 415.0 baguette2 1 s
+t 375.0 240.0 t0 0 w n
+t 555.0 240.0 t1 0 w n
+p 170.0 145.0 pense1 1 n
+p 170.0 375.0 mange1 0 n
+p 750.0 135.0 pense2 1 n
+p 755.0 360.0 mange2 0 n
+t 25.0 255.0 t4 0 w n
+t 905.0 245.0 t5 0 w n
+e t5 pense2 1 n
+e t4 pense1 1 n
+e baguette1 t0 1 n
+e baguette2 t0 1 n
+e baguette2 t1 1 n
+e baguette1 t1 1 n
+e pense1 t0 1 n
+e t0 mange1 1 n
+e mange1 t4 1 n
+e t4 baguette2 1 n
+e t4 baguette1 1 n
+e pense2 t1 1 n
+e t1 mange2 1 n
+e mange2 t5 1 n
+e t5 baguette2 1 n
+e t5 baguette1 1 n
+h PhiloProblem
