@@ -1,0 +1,21 @@
+char = _{ASCII_ALPHANUMERIC}
+ws = _{" "*}
+number = {ASCII_DIGIT+}
+identifier = {char+}
+assignment = _{ws ~ "=" ~ ws}
+place = { "place " ~ identifier ~ assignment ~ number ~ NEWLINE}
+entry = {
+	( (identifier ~ ":" ~ number ~ ws) | (identifier ~ ws) )
+}
+inputs =  {"inputs:" ~ ws ~ entry*}
+outputs = {"outputs:" ~ ws ~ entry*}
+transition = { 
+	"transition " ~ ws ~ identifier ~ NEWLINE ~
+    inputs ~ NEWLINE ~
+    outputs ~ NEWLINE
+}
+petri_net = {
+	SOI ~
+	(place | transition)* ~
+    EOI
+}

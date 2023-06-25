@@ -62,6 +62,7 @@
 pub mod graph_gen;
 /// Module used to parse ndr file
 pub mod ndr_parser;
+mod petri_parser;
 
 use crate::{graph_gen::*, ndr_parser::*};
 use clap::*;
