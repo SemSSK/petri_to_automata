@@ -45,6 +45,7 @@ fn read_file(file_content: &str) -> Result<(Vec<Place>, Vec<Transition>), Error>
     Ok((places, transitions))
 }
 
+/// Abstration over place extraction to reduce boilder-plate
 fn extract_place(inner_rules: &mut Pairs<'_, Rule>) -> Place {
     Place {
         name: inner_rules.next().unwrap().as_str().to_string(),
