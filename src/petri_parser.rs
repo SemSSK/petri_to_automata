@@ -1,5 +1,3 @@
-use std::fs;
-
 use anyhow::Error;
 use pest::{iterators::Pairs, Parser};
 use pest_derive::Parser;
@@ -23,6 +21,7 @@ struct Place {
     tokens: i32,
 }
 
+/// Constructs Abstract syntax tree from Raw file
 fn read_file(file_content: &str) -> Result<(Vec<Place>, Vec<Transition>), Error> {
     let file = PestParser::parse(Rule::petri_net, &file_content)?
         .next()
@@ -53,6 +52,7 @@ fn read_file(file_content: &str) -> Result<(Vec<Place>, Vec<Transition>), Error>
     Ok((places, transitions))
 }
 
+/// Converts transition Rule to Transition struct
 fn extract_transition(inner_rules: &mut Pairs<'_, Rule>) -> Transition {
     let name = inner_rules.next().unwrap().as_str().to_string();
     let inputs = inner_rules
@@ -94,6 +94,7 @@ fn extract_transition(inner_rules: &mut Pairs<'_, Rule>) -> Transition {
     }
 }
 
+/// Validates transition places
 fn validate_transitions(
     (places, transitions): (Vec<Place>, Vec<Transition>),
 ) -> Result<(Vec<Place>, Vec<Transition>), ErrorTypes> {
@@ -114,6 +115,7 @@ fn validate_transitions(
     }
 }
 
+/// Generates the inputs read by the backend (transition matrix + initial marking vector)
 fn generate_input((places, transitions): (Vec<Place>, Vec<Transition>)) -> Input {
     let m_init = places
         .iter()
@@ -153,6 +155,7 @@ fn generate_input((places, transitions): (Vec<Place>, Vec<Transition>)) -> Input
     }
 }
 
+/// Exposed frontend of the parser
 pub fn parse_petri_file_to_input(file_content: &str) -> Result<Input, Error> {
     let content = read_file(file_content)?;
     let validated_content = validate_transitions(content)?;
@@ -163,10 +166,7 @@ pub fn parse_petri_file_to_input(file_content: &str) -> Result<Input, Error> {
 #[cfg(test)]
 mod test {
 
-    use crate::{
-        graph_gen::Input,
-        petri_parser::{parse_petri_file_to_input, read_file},
-    };
+    use crate::{graph_gen::Input, petri_parser::parse_petri_file_to_input};
 
     #[test]
     fn t() {
