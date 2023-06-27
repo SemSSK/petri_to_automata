@@ -33,37 +33,35 @@ fn read_file(file_content: &str) -> Result<(Vec<Place>, Vec<Transition>), Error>
     for line in file.into_inner() {
         match line.as_rule() {
             Rule::place => {
-                let mut inner_rules = line.into_inner(); // an identifier and a
-                let p = Place {
-                    name: inner_rules.next().unwrap().as_str().to_string(),
-                    tokens: inner_rules.next().unwrap().as_str().parse::<i32>().unwrap(),
-                };
-                places.push(p);
+                places.push(extract_place(&mut line.into_inner()));
             }
             Rule::transition => {
-                let mut inner_rules = line.into_inner();
-                let t = extract_transition(&mut inner_rules);
-                transitions.push(t);
+                transitions.push(extract_transition(&mut line.into_inner()));
             }
             Rule::EOI => (),
-            _ => (),
+            _ => unreachable!(),
         }
     }
     Ok((places, transitions))
 }
 
-/// Converts transition Rule to Transition struct
-fn extract_transition(inner_rules: &mut Pairs<'_, Rule>) -> Transition {
-    let name = inner_rules.next().unwrap().as_str().to_string();
-    let inputs = extract_entries(inner_rules);
-    let outputs = extract_entries(inner_rules);
-    Transition {
-        name,
-        inputs,
-        outputs,
+fn extract_place(inner_rules: &mut Pairs<'_, Rule>) -> Place {
+    Place {
+        name: inner_rules.next().unwrap().as_str().to_string(),
+        tokens: inner_rules.next().unwrap().as_str().parse::<i32>().unwrap(),
     }
 }
 
+/// Converts transition Rule to Transition struct
+fn extract_transition(inner_rules: &mut Pairs<'_, Rule>) -> Transition {
+    Transition {
+        name: inner_rules.next().unwrap().as_str().to_string(),
+        inputs: extract_entries(inner_rules),
+        outputs: extract_entries(inner_rules),
+    }
+}
+
+/// Abstration over entries extraction to reduce boilder plate
 fn extract_entries(inner_rules: &mut Pairs<'_, Rule>) -> Vec<(String, i32)> {
     inner_rules
         .next()
