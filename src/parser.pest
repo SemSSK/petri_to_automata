@@ -16,6 +16,6 @@ transition = {
 }
 petri_net = {
 	SOI ~
-	(place | transition)* ~
+	(place | transition | NEWLINE)* ~ NEWLINE* ~
     EOI
 }

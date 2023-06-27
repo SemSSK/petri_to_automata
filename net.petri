@@ -1,0 +1,11 @@
+place p0 = 1
+place p1 = 2
+place p2 = 0
+
+transition t0
+inputs: p0 p1:2
+outputs: p0 p2:2
+
+transition t1
+inputs: p2 
+outputs: p1

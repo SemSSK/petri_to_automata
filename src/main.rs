@@ -64,9 +64,10 @@ pub mod graph_gen;
 pub mod ndr_parser;
 mod petri_parser;
 
-use crate::{graph_gen::*, ndr_parser::*};
+use crate::graph_gen::*;
 use clap::*;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
+use petri_parser::parse_petri_file_to_input;
 use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
@@ -98,7 +99,7 @@ STATE_TRANSITION
 #[command(author, version)]
 pub struct Args {
     /// path to the source of the petri network
-    #[arg(short,long,default_value_t=String::from("./net1.ndr"))]
+    #[arg(short,long,default_value_t=String::from("./net.petri"))]
     source: String,
     /// path to the output file
     #[arg(short,long,default_value_t=String::from("./automata.smv"))]
@@ -119,7 +120,7 @@ fn main() -> Result<(), anyhow::Error> {
     } = if petri.starts_with("{") {
         serde_json::from_str(&petri)?
     } else {
-        get_input_from_ndr(&petri)
+        parse_petri_file_to_input(&petri)?
     };
 
     if transitions.iter().any(|t| t.len() != m_init.len()) {

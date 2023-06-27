@@ -10,10 +10,12 @@ pub enum ErrorTypes {
     CannotAssembleGraph { reason: String },
     #[error("Cannot generate graph as the transition {transition:?} will generate a graph of infinite nodes")]
     PotentialInfiniteGraph { transition: Vec<i32> },
+    #[error("Reference to an undeclared place in a transition")]
+    PlaceNotDeclared,
 }
 
 /// description of the input shape
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct Input {
     pub m_names: Vec<String>,
     pub m_init: Vec<Option<i32>>,
@@ -204,7 +206,7 @@ pub fn generate_graph(
 fn add_vector(u: &[(i32, i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
     u.iter()
         .zip(v)
-        .map(|((x1, x2), y)| y.map(|y| if y + x2 >= 0 { y + x1 } else { -1 }))
+        .map(|((x1, x2), y)| y.map(|y| if y - x1 >= 0 { y + x2 - x1 } else { -1 }))
         .collect()
 }
 
