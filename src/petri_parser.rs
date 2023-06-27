@@ -55,43 +55,32 @@ fn read_file(file_content: &str) -> Result<(Vec<Place>, Vec<Transition>), Error>
 /// Converts transition Rule to Transition struct
 fn extract_transition(inner_rules: &mut Pairs<'_, Rule>) -> Transition {
     let name = inner_rules.next().unwrap().as_str().to_string();
-    let inputs = inner_rules
-        .next()
-        .unwrap()
-        .into_inner()
-        .into_iter()
-        .map(|entry| {
-            let mut rule = entry.into_inner();
-            (
-                rule.next().unwrap().as_str().to_string(),
-                match rule.next() {
-                    Some(v) => v.as_str().parse::<i32>().unwrap(),
-                    None => 1,
-                },
-            )
-        })
-        .collect::<Vec<_>>();
-    let outputs = inner_rules
-        .next()
-        .unwrap()
-        .into_inner()
-        .into_iter()
-        .map(|entry| {
-            let mut rule = entry.into_inner();
-            (
-                rule.next().unwrap().as_str().to_string(),
-                match rule.next() {
-                    Some(v) => v.as_str().parse::<i32>().unwrap(),
-                    None => 1,
-                },
-            )
-        })
-        .collect::<Vec<_>>();
+    let inputs = extract_entries(inner_rules);
+    let outputs = extract_entries(inner_rules);
     Transition {
         name,
         inputs,
         outputs,
     }
+}
+
+fn extract_entries(inner_rules: &mut Pairs<'_, Rule>) -> Vec<(String, i32)> {
+    inner_rules
+        .next()
+        .unwrap()
+        .into_inner()
+        .into_iter()
+        .map(|entry| {
+            let mut rule = entry.into_inner();
+            (
+                rule.next().unwrap().as_str().to_string(),
+                match rule.next() {
+                    Some(v) => v.as_str().parse::<i32>().unwrap(),
+                    None => 1,
+                },
+            )
+        })
+        .collect()
 }
 
 /// Validates transition places
@@ -166,11 +155,14 @@ pub fn parse_petri_file_to_input(file_content: &str) -> Result<Input, Error> {
 #[cfg(test)]
 mod test {
 
+    use std::fs;
+
     use crate::{graph_gen::Input, petri_parser::parse_petri_file_to_input};
 
     #[test]
     fn t() {
-        let actual = parse_petri_file_to_input("./net.petri").unwrap();
+        let actual =
+            parse_petri_file_to_input(&fs::read_to_string("./net.petri").unwrap()).unwrap();
         let expected = Input {
             m_names: vec!["p0".to_string(), "p1".to_string(), "p2".to_string()],
             m_init: vec![Some(1), Some(2), Some(0)],
