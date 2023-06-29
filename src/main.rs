@@ -1,3 +1,4 @@
+pub mod error_type;
 /// Generates the marquage graph and the NuSMV code from a Petri network
 /// ## Inputs
 /// Takes the petri network as a :
@@ -66,8 +67,9 @@ mod petri_parser;
 
 use crate::graph_gen::*;
 use clap::*;
+use error_type::ErrorTypes;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
-use petri_parser::parse_petri_file_to_input;
+use petri_parser::parser::*;
 use std::{collections::HashMap, fs};
 
 const DOT_TEMPLATE: &str = r#"
@@ -120,7 +122,7 @@ fn main() -> Result<(), anyhow::Error> {
     } = if petri.starts_with("{") {
         serde_json::from_str(&petri)?
     } else {
-        parse_petri_file_to_input(&petri)?
+        PetriNet::new(&petri)?.generate_input()
     };
 
     if transitions.iter().any(|t| t.len() != m_init.len()) {
