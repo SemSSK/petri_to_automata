@@ -63,12 +63,14 @@ pub mod error_type;
 pub mod graph_gen;
 /// Module used to parse ndr file
 pub mod ndr_parser;
+mod output_generators;
 mod petri_parser;
 
-use crate::graph_gen::*;
+use crate::{graph_gen::*, output_generators::vector_to_string};
 use clap::*;
 use error_type::ErrorTypes;
 use graphviz_rust::{cmd::Format, exec, parse, printer::PrinterContext};
+use output_generators::generate_smv_code;
 use petri_parser::parser::*;
 use std::{collections::HashMap, fs};
 
@@ -77,22 +79,6 @@ const DOT_TEMPLATE: &str = r#"
         NAMING
         GRAPH
     }
-"#;
-
-const CODE_TEMPLATE: &str = r#"
-MODULE main
-    VAR
-        s : STATES;
-PLACES
-    ASSIGN
-        init(s) := STATE_ASSIGN;
-
-        next(s) := case
-STATE_TRANSITION
-        esac;
-        
-        PLACE_TRANSITION
-
 "#;
 
 #[derive(Debug, Parser)]
@@ -152,87 +138,7 @@ fn main() -> Result<(), anyhow::Error> {
         ps.iter().zip(k).map(|(p, x)| p.update(*x)).collect()
     });
 
-    let code_template = CODE_TEMPLATE
-        .replace(
-            "STATES",
-            &format!(
-                "{{{}}}",
-                marquage_graph
-                    .keys()
-                    .map(|m| format!("s_{}", vector_to_string(m, "_")))
-                    .collect::<Vec<_>>()
-                    .join(",")
-            ),
-        )
-        .replace(
-            "PLACES",
-            &places
-                .iter()
-                .map(|p| {
-                    format!(
-                        "\t\t{} : {};",
-                        p.alias,
-                        /*p.min,*/
-                        if p.max == p.min {
-                            format!("0..{}", p.max)
-                        } else {
-                            format!("{}..{}", p.min, p.max)
-                        }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
-        .replace(
-            "STATE_ASSIGN",
-            &format!("s_{}", vector_to_string(&m_init, "_")),
-        )
-        .replace(
-            "STATE_TRANSITION",
-            &marquage_graph
-                .iter()
-                .map(|(current, next)| {
-                    format!(
-                        "\t\ts={} : {{{}}};",
-                        format!("s_{}", vector_to_string(current, "_")),
-                        if next.len() > 0 {
-                            next.iter()
-                                .map(|(_, v)| format!("s_{}", vector_to_string(v, "_")))
-                                .collect::<Vec<_>>()
-                                .join(",")
-                        } else {
-                            "s".to_string()
-                        }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
-        .replace(
-            "PLACE_TRANSITION",
-            &places
-                .iter()
-                .map(|p| {
-                    format!(
-                        "{} := case\n {} \n\t\tesac;",
-                        p.alias,
-                        marquage_graph
-                            .keys()
-                            .map(|current| format!(
-                                "\t\ts=s_{} : {{{}}};",
-                                vector_to_string(current, "_"),
-                                match current[p.indice] {
-                                    Some(x) => x,
-                                    None => p.max,
-                                }
-                            ))
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n\t\t"),
-        );
+    let code_template = generate_smv_code(&m_init, &marquage_graph, &places);
 
     fs::write(&args.output, code_template)?;
 

@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use thiserror::Error;
 
 /// description of the input shape
 #[derive(Debug, Deserialize, PartialEq, Eq)]
@@ -195,14 +194,4 @@ fn add_vector(u: &[(i32, i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
         .zip(v)
         .map(|((x1, x2), y)| y.map(|y| if y - x1 >= 0 { y + x2 - x1 } else { -1 }))
         .collect()
-}
-
-pub fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
-    v.iter()
-        .map(|x| match x {
-            Some(x) => x.to_string(),
-            None => "n".to_string(),
-        })
-        .collect::<Vec<_>>()
-        .join(sep)
 }
