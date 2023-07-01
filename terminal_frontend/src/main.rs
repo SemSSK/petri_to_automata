@@ -1,75 +1,7 @@
-pub mod error_type;
-/// Generates the marquage graph and the NuSMV code from a Petri network
-/// ## Inputs
-/// Takes the petri network as a :
-///
-/// ### JSON file
-/// #### Example
-/// ```json
-///     {
-///   "m_names": [
-///     "A",
-///     "B",
-///     "C"
-///   ],
-///   "m_init": [
-///     1,
-///     0,
-///     2
-///   ],
-///   "transitions": [
-///     [
-///       [
-///         0,
-///         0
-///       ],
-///       [
-///         -2,
-///         -2
-///       ],
-///       [
-///         2,
-///         0
-///       ]
-///     ],
-///     [
-///       [
-///         -1,
-///         -1
-///       ],
-///       [
-///         1,
-///         0
-///       ],
-///       [
-///         0,
-///         0
-///       ]
-///     ]
-///   ]
-/// }
-/// ```
-/// ### As a Tina Ndr file:
-/// #### Example
-/// p 215.0 210.0 p0 4 n
-/// p 30.0 50.0 p1 1 n
-/// t 55.0 180.0 t0 0 w n
-/// t 185.0 60.0 t1 0 w n
-/// e t1 p1 1 n
-/// e p0 t1 1 n
-/// e t0 p1 1 n
-/// e p0 t0 2 n
-/// h test
-pub mod graph_gen;
-/// Module used to parse ndr file
-pub mod ndr_parser;
-mod output_generators;
-mod petri_parser;
-
-use crate::graph_gen::*;
+use backend::error_type::ErrorTypes;
+use backend::graph_gen::*;
+use backend::petri_parser::parser::*;
 use clap::*;
-use error_type::ErrorTypes;
-use petri_parser::parser::*;
 use std::fs;
 
 #[derive(Debug, Parser)]

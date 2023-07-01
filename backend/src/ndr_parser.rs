@@ -1,4 +1,4 @@
-use crate::Input;
+use crate::graph_gen::Input;
 
 #[derive(Debug)]
 struct Place {
