@@ -11,6 +11,8 @@ pub struct Input {
 use iter_tools::Itertools;
 use std::collections::HashMap;
 
+use crate::output_generators::Output;
+
 /// internal representation of a place node in a petri network
 #[derive(Debug, Clone)]
 pub struct Place {
@@ -21,6 +23,27 @@ pub struct Place {
 }
 
 impl Place {
+    pub fn build(
+        m_names: &[String],
+        m_init: &[Option<i32>],
+        marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
+    ) -> Vec<Self> {
+        let places = m_init
+            .iter()
+            .zip(m_names)
+            .enumerate()
+            .map(|(i, (v, s))| Place {
+                alias: s.clone(),
+                indice: i,
+                max: v.unwrap(),
+                min: v.unwrap(),
+            })
+            .collect::<Vec<_>>();
+
+        marking_graph.keys().fold(places, |ps, k| {
+            ps.iter().zip(k).map(|(p, x)| p.update(*x)).collect()
+        })
+    }
     /// updates the k border values (min and max) of the node
     pub fn update(&self, v: Option<i32>) -> Self {
         let Some(v) = v else {
@@ -63,7 +86,7 @@ impl Place {
 /// ## Returns
 ///
 /// a `Vec<&'a Vec<Option<i32>>>` the parents of the node
-pub fn get_parents_of_marking<'a>(
+fn get_parents_of_marking<'a>(
     m: &'a Vec<Option<i32>>,
     marquage_graph: &'a HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
     acc: &mut Vec<&'a Vec<Option<i32>>>,
@@ -95,7 +118,7 @@ pub fn get_parents_of_marking<'a>(
 ///
 /// ## Returns
 /// `()`: use mutation of the `marquage_graph` to store its value   
-pub fn generate_graph(
+fn generate_graph(
     m: Vec<Option<i32>>,
     transitions: &Vec<Vec<(i32, i32)>>,
     marquage_graph: &mut HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
@@ -105,7 +128,7 @@ pub fn generate_graph(
         .map(|t| {
             (
                 t.iter().map(|(t, _)| *t).collect::<Vec<_>>(),
-                add_vector(t, &m),
+                activate_transition(t, &m),
             )
         })
         .filter(|(_, m)| {
@@ -189,9 +212,27 @@ pub fn generate_graph(
 }
 
 /// Does the addition between a transition and a marquage
-fn add_vector(u: &[(i32, i32)], v: &[Option<i32>]) -> Vec<Option<i32>> {
-    u.iter()
-        .zip(v)
+fn activate_transition(transition: &[(i32, i32)], marking: &[Option<i32>]) -> Vec<Option<i32>> {
+    transition
+        .iter()
+        .zip(marking)
         .map(|((x1, x2), y)| y.map(|y| if y - x1 >= 0 { y + x2 - x1 } else { -1 }))
         .collect()
+}
+
+pub fn compile_to_output(input: Input) -> Result<Output, anyhow::Error> {
+    let Input {
+        m_names,
+        m_init,
+        transitions,
+    } = input;
+
+    // CONSTRUCTION DU GRAPH DES MARQUAGES
+    let mut marking_graph = HashMap::new();
+    generate_graph(m_init.clone(), &transitions, &mut marking_graph);
+
+    // GENERATION DES BORNES DES PLACES
+    let places = Place::build(&m_names, &m_init, &marking_graph);
+
+    Output::generate(&m_names, &m_init, &marking_graph, &places, &transitions)
 }
