@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs, io};
 
 use graphviz_rust::{cmd::Format, printer::PrinterContext};
 
@@ -26,6 +26,34 @@ STATE_TRANSITION
         PLACE_TRANSITION
 
 "#;
+
+pub struct Output {
+    smv: String,
+    svg: String,
+}
+
+impl Output {
+    pub fn generate(
+        m_names: &Vec<String>,
+        m_init: &Vec<Option<i32>>,
+        marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
+        places: &Vec<Place>,
+        transitions: &Vec<Vec<(i32, i32)>>,
+    ) -> Result<Self, anyhow::Error> {
+        Ok(Self {
+            smv: generate_smv_code(m_init, marking_graph, places),
+            svg: generate_svg(m_names, marking_graph, transitions)?,
+        })
+    }
+
+    pub fn save_smv(&self, smv_file_path: &str) -> Result<(), io::Error> {
+        fs::write(smv_file_path, &self.smv)
+    }
+
+    pub fn save_svg(&self, svg_file_path: &str) -> Result<(), io::Error> {
+        fs::write(svg_file_path, &self.svg)
+    }
+}
 
 pub fn vector_to_string(v: &Vec<Option<i32>>, sep: &str) -> String {
     v.iter()

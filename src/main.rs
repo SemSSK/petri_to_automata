@@ -69,7 +69,7 @@ mod petri_parser;
 use crate::graph_gen::*;
 use clap::*;
 use error_type::ErrorTypes;
-use output_generators::{generate_smv_code, generate_svg};
+use output_generators::Output;
 use petri_parser::parser::*;
 use std::{collections::HashMap, fs};
 
@@ -82,11 +82,8 @@ pub struct Args {
     #[arg(short,long,default_value_t=String::from("./net.petri"))]
     source: String,
     /// path to the output file
-    #[arg(short,long,default_value_t=String::from("./automata.smv"))]
+    #[arg(short,long,default_value_t=String::from("./automata"))]
     output: String,
-    /// path to optional output as a dot file readable by graphviz
-    #[arg(short, long)]
-    dot: Option<String>,
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -110,8 +107,8 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     // CONSTRUCTION DU GRAPH DES MARQUAGES
-    let mut marquage_graph = HashMap::new();
-    generate_graph(m_init.clone(), &transitions, &mut marquage_graph);
+    let mut marking_graph = HashMap::new();
+    generate_graph(m_init.clone(), &transitions, &mut marking_graph);
 
     // GENERATION DES BORNES DES PLACES
     let places = m_init
@@ -126,21 +123,15 @@ fn main() -> Result<(), anyhow::Error> {
         })
         .collect::<Vec<_>>();
 
-    let places = marquage_graph.keys().fold(places, |ps, k| {
+    let places = marking_graph.keys().fold(places, |ps, k| {
         ps.iter().zip(k).map(|(p, x)| p.update(*x)).collect()
     });
 
-    let code_template = generate_smv_code(&m_init, &marquage_graph, &places);
+    let output = Output::generate(&m_names, &m_init, &marking_graph, &places, &transitions)?;
 
-    fs::write(&args.output, code_template)?;
+    output.save_smv(&format!("{}{}", args.output, ".smv"))?;
+    output.save_svg(&format!("{}{}", args.output, ".svg"))?;
 
-    // generating graph using graphviz
-    if let Some(p) = args.dot {
-        let graph_svg = generate_svg(&m_names, &marquage_graph, &transitions)?;
-        // fs::write(format!("{}.dot", &p), dot_template)?;
-        fs::write(format!("{}.svg", &p), graph_svg)?;
-        open::that(&format!("{}.svg", &p))?;
-    };
-
+    open::that(&format!("{}{}", args.output, ".svg"))?;
     Ok(())
 }
