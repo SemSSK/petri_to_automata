@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
-use crate::graph_gen::Place;
+use graphviz_rust::{cmd::Format, printer::PrinterContext};
 
-// const DOT_TEMPLATE: &str = r#"
-//     digraph {
-//         NAMING
-//         GRAPH
-//     }
-// "#;
+use crate::{error_type::ErrorTypes, graph_gen::Place};
+
+const DOT_TEMPLATE: &str = r#"
+    digraph {
+        NAMING
+        GRAPH
+    }
+"#;
 
 const CODE_TEMPLATE: &str = r#"
 MODULE main
@@ -121,4 +123,46 @@ pub fn generate_smv_code(
                 .collect::<Vec<_>>()
                 .join("\n\t\t"),
         )
+}
+
+pub fn generate_svg(
+    m_names: &Vec<String>,
+    marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
+    transitions: &Vec<Vec<(i32, i32)>>,
+) -> Result<String, anyhow::Error> {
+    let dot_template = DOT_TEMPLATE
+        .replace("NAMING", &format!("\"{}\"", m_names.join("-")))
+        .replace(
+            "GRAPH",
+            &marking_graph
+                .iter()
+                .map(|(k, v)| {
+                    v.iter()
+                        .map(|(t, n)| {
+                            format!(
+                                " \"{}\" -> \"{}\" [label = \"t{}\"]",
+                                vector_to_string(k, "-"),
+                                vector_to_string(n, "-"),
+                                transitions
+                                    .iter()
+                                    .enumerate()
+                                    .find(|(_, x)| x.iter().zip(t).all(|((x, _), t)| t == x))
+                                    .unwrap()
+                                    .0
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(";\n")
+                })
+                .collect::<Vec<_>>()
+                .join("\n\t\t"),
+        );
+
+    let graph = graphviz_rust::parse(&dot_template)
+        .map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+    Ok(graphviz_rust::exec(
+        graph,
+        &mut PrinterContext::default(),
+        vec![Format::Svg.into()],
+    )?)
 }
