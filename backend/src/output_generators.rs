@@ -30,6 +30,7 @@ STATE_TRANSITION
 pub struct Output {
     smv: String,
     svg: String,
+    png: String,
 }
 
 impl Output {
@@ -43,6 +44,7 @@ impl Output {
         Ok(Self {
             smv: generate_smv_code(m_init, marking_graph, places),
             svg: generate_svg(m_names, marking_graph, transitions)?,
+            png: generate_png(m_names, marking_graph, transitions)?,
         })
     }
 
@@ -153,12 +155,12 @@ pub fn generate_smv_code(
         )
 }
 
-pub fn generate_svg(
+fn generate_dot_template(
     m_names: &Vec<String>,
     marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
     transitions: &Vec<Vec<(i32, i32)>>,
-) -> Result<String, anyhow::Error> {
-    let dot_template = DOT_TEMPLATE
+) -> String {
+    DOT_TEMPLATE
         .replace("NAMING", &format!("\"{}\"", m_names.join("-")))
         .replace(
             "GRAPH",
@@ -184,7 +186,16 @@ pub fn generate_svg(
                 })
                 .collect::<Vec<_>>()
                 .join("\n\t\t"),
-        );
+        )
+        .to_string()
+}
+
+pub fn generate_svg(
+    m_names: &Vec<String>,
+    marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
+    transitions: &Vec<Vec<(i32, i32)>>,
+) -> Result<String, anyhow::Error> {
+    let dot_template = generate_dot_template(m_names, marking_graph, transitions);
 
     let graph = graphviz_rust::parse(&dot_template)
         .map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
@@ -192,5 +203,21 @@ pub fn generate_svg(
         graph,
         &mut PrinterContext::default(),
         vec![Format::Svg.into()],
+    )?)
+}
+
+pub fn generate_png(
+    m_names: &Vec<String>,
+    marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
+    transitions: &Vec<Vec<(i32, i32)>>,
+) -> Result<String, anyhow::Error> {
+    let dot_template = generate_dot_template(m_names, marking_graph, transitions);
+
+    let graph = graphviz_rust::parse(&dot_template)
+        .map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
+    Ok(graphviz_rust::exec(
+        graph,
+        &mut PrinterContext::default(),
+        vec![Format::Png.into()],
     )?)
 }

@@ -13,6 +13,16 @@
         overlays = [(import rust-overlay)];
         pkgs = import nixpkgs { inherit system overlays; };
         naersk-lib = pkgs.callPackage naersk { };
+        libraries = with pkgs;[
+          webkitgtk
+          gtk3
+          cairo
+          gdk-pixbuf
+          glib
+          dbus
+          openssl_3
+          librsvg
+        ];
       in
       {
         defaultPackage = naersk-lib.buildPackage ./.;
@@ -25,7 +35,21 @@
             protobuf
             bacon
             graphviz
+
+            nodejs_18
+            nodePackages.typescript
+
+            curl
+            wget
+            dbus
+            openssl_3
+            glib
+            gtk3
+            libsoup
+            webkitgtk
+            librsvg
           ];
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libraries;
           RUST_SRC_PATH = rustPlatform.rustLibSrc;
         };
       });
