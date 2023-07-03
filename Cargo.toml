@@ -1,4 +1,4 @@
 [workspace]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-members = ["backend", "terminal_frontend", "tauri_gui/src-tauri"]
+members = ["backend", "terminal_frontend"]
