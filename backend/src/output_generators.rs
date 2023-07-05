@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fs, io};
+use std::{
+    collections::HashMap,
+    fs, io,
+    process::{Command, Stdio},
+};
 
 use graphviz_rust::{cmd::Format, printer::PrinterContext};
 
@@ -27,10 +31,11 @@ STATE_TRANSITION
 
 "#;
 
+#[derive(Debug)]
 pub struct Output {
     smv: String,
     svg: String,
-    png: String,
+    pub png: Vec<u8>,
 }
 
 impl Output {
@@ -54,6 +59,10 @@ impl Output {
 
     pub fn save_svg(&self, svg_file_path: &str) -> Result<(), io::Error> {
         fs::write(svg_file_path, &self.svg)
+    }
+
+    pub fn save_png(&self, svg_file_path: &str) -> Result<(), io::Error> {
+        fs::write(svg_file_path, &self.png)
     }
 }
 
@@ -210,14 +219,16 @@ pub fn generate_png(
     m_names: &Vec<String>,
     marking_graph: &HashMap<Vec<Option<i32>>, Vec<(Vec<i32>, Vec<Option<i32>>)>>,
     transitions: &Vec<Vec<(i32, i32)>>,
-) -> Result<String, anyhow::Error> {
+) -> Result<Vec<u8>, anyhow::Error> {
     let dot_template = generate_dot_template(m_names, marking_graph, transitions);
-
-    let graph = graphviz_rust::parse(&dot_template)
-        .map_err(|e| ErrorTypes::CannotAssembleGraph { reason: e })?;
-    Ok(graphviz_rust::exec(
-        graph,
-        &mut PrinterContext::default(),
-        vec![Format::Png.into()],
-    )?)
+    let echo_child = Command::new("echo")
+        .arg(format!("{}", dot_template))
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let dot_child = Command::new("dot")
+        .arg("-Tpng")
+        .stdin(Stdio::from(echo_child.stdout.unwrap()))
+        .output()?;
+    let file = dot_child.stdout;
+    Ok(file)
 }

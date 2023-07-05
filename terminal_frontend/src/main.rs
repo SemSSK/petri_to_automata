@@ -40,8 +40,8 @@ fn main() -> Result<(), anyhow::Error> {
     let output = compile_to_output(input)?;
 
     output.save_smv(&format!("{}{}", args.output, ".smv"))?;
-    output.save_svg(&format!("{}{}", args.output, ".svg"))?;
+    output.save_png(&format!("{}{}", args.output, ".png"))?;
 
-    open::that(&format!("{}{}", args.output, ".svg"))?;
+    open::that(&format!("{}{}", args.output, ".png"))?;
     Ok(())
 }

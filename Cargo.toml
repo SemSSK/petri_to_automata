@@ -1,4 +1,4 @@
 [workspace]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-members = ["backend", "terminal_frontend"]
+members = ["backend", "terminal_frontend", "nativeui_frontend"]
