@@ -4,15 +4,19 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     utils.url = "github:numtide/flake-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    # pest-ide-tools.url = "github:SemSSK/pest-ide-tools";
+    pest-ide-tools = {
+      url = "github:SemSSK/pest-ide-tools";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, naersk, nixpkgs, utils, rust-overlay}:
+  outputs = { self, naersk, nixpkgs, utils, rust-overlay, pest-ide-tools}:
     utils.lib.eachDefaultSystem (system:
       let
-        overlays = [(import rust-overlay)];
+        overlays = [(import rust-overlay)]; 
         pkgs = import nixpkgs { inherit system overlays; };
-        naersk-lib = pkgs.callPackage naersk { };
+        naersk-lib = pkgs.callPackage naersk {};
+        pest-ide = pest-ide-tools.packages.${system}.default;
         libPath = pkgs.lib.makeLibraryPath (with pkgs; [
           libGL
           libxkbcommon
@@ -31,9 +35,9 @@
             pkg-config
             rust-bin.stable.latest.default
             udev            
-            protobuf
             bacon
             graphviz
+            pest-ide
           ];
           RUST_SRC_PATH = rustPlatform.rustLibSrc;
           LD_LIBRARY_PATH = libPath;
